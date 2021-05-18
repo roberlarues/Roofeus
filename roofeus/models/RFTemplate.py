@@ -1,4 +1,4 @@
-from models.RFTemplateVertex import RFTemplateVertex
+from roofeus.models.RFTemplateVertex import RFTemplateVertex
 
 
 class RFTemplate:

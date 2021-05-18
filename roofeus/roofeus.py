@@ -1,6 +1,5 @@
 from math import floor
-from shapely.geometry import Point
-from shapely.geometry.polygon import Polygon
+from roofeus.utils import sub_vectors, add_vectors, mul_vector_by_scalar, calc_vector_lineal_combination_params, Polygon
 
 
 def create_2d_mesh(template, target):
@@ -23,38 +22,18 @@ def create_2d_mesh(template, target):
     for row in projected_mesh:
         for col in row:
             for v in range(0, len(col)):
-                if not polygon.contains(Point(col[v])):
+                if not polygon.contains(col[v]):
                     col[v] = ()
     return projected_mesh
 
 
 def transform_to_3d_mesh(target, mesh_2d):
     def transform_vertex(g, v):
-        def add_vectors(v1, v2):
-            if len(v1) == 2:
-                return v1[0] + v2[0], v1[1] + v2[1]
-            else:
-                return v1[0] + v2[0], v1[1] + v2[1], v1[2] + v2[2]
-
-        def sub_vectors(v1, v2):
-            if len(v1) == 2:
-                return v1[0] - v2[0], v1[1] - v2[1]
-            else:
-                return v1[0] - v2[0], v1[1] - v2[1], v1[2] - v2[2]
-
-        def mul_vector_by_scalar(vector, scalar):
-            return tuple([value * scalar for value in vector])
-
         o = g[0]
         a_t = sub_vectors(g[1].uvs, o.uvs)
         b_t = sub_vectors(g[2].uvs, o.uvs)
         v_t = sub_vectors(v, o.uvs)
-        a = (b_t[0] * v_t[1] - b_t[1] * v_t[0]) / (a_t[1] * b_t[0] - a_t[0] * b_t[1])
-        if not b_t[0] == 0:
-            b = (v_t[0] - a * a_t[0]) / b_t[0]
-        else:
-            b = (v_t[1] - a * a_t[1]) / b_t[1]
-
+        a, b = calc_vector_lineal_combination_params(a_t, b_t, v_t)
         v_a = mul_vector_by_scalar(sub_vectors(g[1].coords, o.coords), a)
         v_b = mul_vector_by_scalar(sub_vectors(g[2].coords, o.coords), b)
         return add_vectors(add_vectors(v_a, v_b), o.coords)
@@ -78,7 +57,7 @@ def transform_to_3d_mesh(target, mesh_2d):
                     # Se itera sobre los subtriangulos de la cara para encontrar los vértices que lo contienen
                     for i in range(0, len(vertex_groups_polygons)):
                         vg_polygon = vertex_groups_polygons[i]
-                        if vg_polygon.contains(Point(v)):
+                        if vg_polygon.contains(v):
                             # Se desproyecta el vértice respecto a los 3 vértices del objetivo que lo contienen
                             quad_3d.append(transform_vertex(vertex_groups[i], v))
             row_3d.append(quad_3d)
@@ -92,7 +71,6 @@ def build_faces(mesh_3d, template):
     for row_index in range(0, len(mesh_3d)):
         row = mesh_3d[row_index]
         for quad_index in range(0, len(row)):
-            quad = row[quad_index]
             for face_idx in range(0, len(template.faces)):
                 face = template.faces[face_idx]
                 face_vertex = []
@@ -100,7 +78,8 @@ def build_faces(mesh_3d, template):
                 for vertex_idx in vertex_idx_list:
                     if vertex_idx < template.vertex_count:
                         # Self quad
-                        face_vertex.append(quad[vertex_idx])
+                        self_quad = row[quad_index]
+                        face_vertex.append(self_quad[vertex_idx])
                     elif vertex_idx < template.vertex_count * 2:
                         # Right quad
                         if quad_index + 1 < len(row):
@@ -121,3 +100,10 @@ def build_faces(mesh_3d, template):
                     faces.append(face_vertex)
                     faces_index.append(face_idx)
     return faces, faces_index
+
+
+def create_mesh(template, target):
+    mesh_2d = create_2d_mesh(template, target)
+    mesh = transform_to_3d_mesh(target, mesh_2d)
+    faces, faces_idx = build_faces(mesh, template)
+    return mesh, faces, faces_idx

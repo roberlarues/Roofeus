@@ -1,13 +1,13 @@
-from models.RFTemplate import RFTemplate
-from models.RFTemplateFace import RFTemplateFace
-from models.RFTemplateVertex import RFTemplateVertex
-from models.RFTargetVertex import RFTargetVertex
+from roofeus.models.RFTargetVertex import RFTargetVertex
+from roofeus.models.RFTemplate import RFTemplate
+from roofeus.models.RFTemplateFace import RFTemplateFace
+from roofeus.models.RFTemplateVertex import RFTemplateVertex
 
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import matplotlib.pyplot as plt
 
-import roofeus as rfs
+import roofeus.roofeus as rfs
 
 
 def prepare_template():
