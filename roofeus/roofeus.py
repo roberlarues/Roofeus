@@ -65,6 +65,16 @@ def transform_to_3d_mesh(target, mesh_2d):
     return mesh_3d
 
 
+def get_vertex_list(mesh):
+    vertex_list = []
+    for row in mesh:
+        for quad in row:
+            for vertex in quad:
+                if len(vertex) > 0:
+                    vertex_list.append(vertex)
+    return vertex_list
+
+
 def build_faces(mesh_3d, template):
     faces = []
     faces_index = []

@@ -1,4 +1,19 @@
-from roofeus.models.RFTemplateVertex import RFTemplateVertex
+class RFTargetVertex:
+    def __init__(self, x, y, z, u, v):
+        self.ident = 0
+        self.coords = (x, y, z)
+        self.uvs = (u, v)
+
+
+class RFTemplateFace:
+    def __init__(self, a, b, c):
+        self.vertex = (a, b, c)
+
+
+class RFTemplateVertex:
+    def __init__(self, x, y):
+        self.ident = 0
+        self.coords = (x, y)
 
 
 class RFTemplate:
@@ -9,7 +24,7 @@ class RFTemplate:
         self.faces = []
         self.face_colors = []
 
-    def calculateIds(self):
+    def calculate_ids(self):
         self.total_vertex_count = 0
         right_vertex = []
         bottom_vertex = []

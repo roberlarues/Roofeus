@@ -1,44 +1,17 @@
-from roofeus.models.RFTargetVertex import RFTargetVertex
-from roofeus.models.RFTemplate import RFTemplate
-from roofeus.models.RFTemplateFace import RFTemplateFace
-from roofeus.models.RFTemplateVertex import RFTemplateVertex
-
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import matplotlib.pyplot as plt
 
 import roofeus.roofeus as rfs
-
-
-def prepare_template():
-    template = RFTemplate()
-    v1 = RFTemplateVertex(0.5, 0.2)
-    v2 = RFTemplateVertex(0.2, 0.8)
-    v3 = RFTemplateVertex(0.8, 0.8)
-
-    template.vertex.append(v1)
-    template.vertex.append(v2)
-    template.vertex.append(v3)
-
-    template.calculateIds()
-
-    template.faces.append(RFTemplateFace(v1, v2, v3))
-    template.faces.append(RFTemplateFace(v1, template.get_vertex_right(v1), v3))
-    template.faces.append(RFTemplateFace(v3, template.get_vertex_right(v1), template.get_vertex_right(v2)))
-    template.faces.append(RFTemplateFace(v2, v3, template.get_vertex_bottom(v1)))
-    template.faces.append(RFTemplateFace(v3, template.get_vertex_right(v2), template.get_vertex_diag_quad(v1)))
-    template.faces.append(RFTemplateFace(v3, template.get_vertex_bottom(v1), template.get_vertex_diag_quad(v1)))
-
-    template.face_colors = [(1, 0, 0), (0, 1, 0), (0, 1, 0), (0, 0, 1), (1, 1, 0), (1, 1, 0)]
-
-    return template
+import roofeus.models as rfsm
+from roofeus.utils import generate_test_template
 
 
 def prepare_target():
     target = [
-        RFTargetVertex(1, 0, 0, -1, -1),
-        RFTargetVertex(1, 1, 0, 2.5, -1),
-        RFTargetVertex(0, 0.5, 1, -1, 2)
+        rfsm.RFTargetVertex(1, 0, 0, -1, -1),
+        rfsm.RFTargetVertex(1, 1, 0, 2.5, -1),
+        rfsm.RFTargetVertex(0, 0.5, 1, -1, 2)
     ]
     return target
 
@@ -101,14 +74,14 @@ def plot_faces(face_list, face_index, template):
 
 
 if __name__ == '__main__':
-    test_template = prepare_template()
-    plot_template(test_template)
+    test_template = generate_test_template()
+    # plot_template(test_template)
 
     test_target = prepare_target()
-    plot_target(test_target)
+    # plot_target(test_target)
 
     mesh_2d = rfs.create_2d_mesh(test_template, test_target)
-    plot_mesh_2d(test_template, test_target, mesh_2d)
+    # plot_mesh_2d(test_template, test_target, mesh_2d)
 
     mesh = rfs.transform_to_3d_mesh(test_target, mesh_2d)
     faces, faces_idx = rfs.build_faces(mesh, test_template)

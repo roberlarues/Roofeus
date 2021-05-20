@@ -1,3 +1,6 @@
+import roofeus.models as rfsm
+
+
 def add_vectors(v1, v2):
     return tuple([v1[i] + v2[i] for i in range(0, len(v1))])
 
@@ -36,3 +39,27 @@ class Polygon:
             if 0 <= a <= 1 and b >= 0:
                 count_cross += 1
         return count_cross % 2 == 1
+
+
+def generate_test_template():
+    template = rfsm.RFTemplate()
+    v1 = rfsm.RFTemplateVertex(0.5, 0.2)
+    v2 = rfsm.RFTemplateVertex(0.2, 0.8)
+    v3 = rfsm.RFTemplateVertex(0.8, 0.8)
+
+    template.vertex.append(v1)
+    template.vertex.append(v2)
+    template.vertex.append(v3)
+
+    template.calculate_ids()
+
+    template.faces.append(rfsm.RFTemplateFace(v1, v2, v3))
+    template.faces.append(rfsm.RFTemplateFace(v1, template.get_vertex_right(v1), v3))
+    template.faces.append(rfsm.RFTemplateFace(v3, template.get_vertex_right(v1), template.get_vertex_right(v2)))
+    template.faces.append(rfsm.RFTemplateFace(v2, v3, template.get_vertex_bottom(v1)))
+    template.faces.append(rfsm.RFTemplateFace(v3, template.get_vertex_right(v2), template.get_vertex_diag_quad(v1)))
+    template.faces.append(rfsm.RFTemplateFace(v3, template.get_vertex_bottom(v1), template.get_vertex_diag_quad(v1)))
+
+    template.face_colors = [(1, 0, 0), (0, 1, 0), (0, 1, 0), (0, 0, 1), (1, 1, 0), (1, 1, 0)]
+
+    return template
