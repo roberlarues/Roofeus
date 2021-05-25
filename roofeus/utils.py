@@ -14,12 +14,30 @@ def mul_vector_by_scalar(vector, scalar):
 
 
 def calc_vector_lineal_combination_params(a_t, b_t, v_t):
-    a = (b_t[0] * v_t[1] - b_t[1] * v_t[0]) / (a_t[1] * b_t[0] - a_t[0] * b_t[1])
+    divider = (a_t[1] * b_t[0] - a_t[0] * b_t[1])
+    if divider == 0:
+        divider_2 = (v_t[1] * b_t[0] - v_t[0] * b_t[1])
+        if not divider_2 == 0:
+            a = v_t[0] / b_t[0]
+        else:
+            print("Vectors not combinable")
+            a = 0
+    else:
+        a = (b_t[0] * v_t[1] - b_t[1] * v_t[0]) / divider
+
     if not b_t[0] == 0:
         b = (v_t[0] - a * a_t[0]) / b_t[0]
     else:
         b = (v_t[1] - a * a_t[1]) / b_t[1]
     return a, b
+
+# Asume orden trianglestrip
+def calculate_vertex_groups(target):
+    vertex_groups = []
+    for i in range(0, len(target) - 2):
+        vertex_groups.append((target[i], target[i + 1], target[i + 2]))
+    vertex_groups_polygons = [Polygon([v.uvs for v in group]) for group in vertex_groups]
+    return vertex_groups, vertex_groups_polygons
 
 
 class Polygon:
@@ -30,15 +48,15 @@ class Polygon:
         self.outer_vertex = (min_x - 1, min_y - 1)
 
     def contains(self, vertex):
-        count_cross = 0
+        found = False
         b_v = sub_vectors(self.outer_vertex, vertex)
         for i in range(0, len(self.vertex_list)):
             a_v = sub_vectors(self.vertex_list[(i + 1) % len(self.vertex_list)], self.vertex_list[i])
             v_v = sub_vectors(vertex, self.vertex_list[i])
             a, b = calc_vector_lineal_combination_params(a_v, b_v, v_v)
             if 0 <= a <= 1 and b >= 0:
-                count_cross += 1
-        return count_cross % 2 == 1
+                found = True
+        return found
 
 
 def generate_test_template():

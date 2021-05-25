@@ -7,11 +7,13 @@ import roofeus.models as rfsm
 from roofeus.utils import generate_test_template
 
 
+# Caras con >3 vértices deben de estar en orden para trianglestrip
 def prepare_target():
     target = [
-        rfsm.RFTargetVertex(1, 0, 0, -1, -1),
-        rfsm.RFTargetVertex(1, 1, 0, 2.5, -1),
-        rfsm.RFTargetVertex(0, 0.5, 1, -1, 2)
+        rfsm.RFTargetVertex(0, 0, 0, -1, -1),
+        rfsm.RFTargetVertex(0, 1, 1, -1, 1),
+        rfsm.RFTargetVertex(1, 0, 0, 1, -1),
+        rfsm.RFTargetVertex(1, 1, 1, 1, 1),
     ]
     return target
 

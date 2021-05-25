@@ -8,7 +8,11 @@ bl_info = {
     "category": "Mesh",
 }
 
-modulesNames = ['roofeus', 'models', 'roofeus_addon', 'utils']
+modulesNames = ['roofeus', 'models', 'utils']
+bpy_module = importlib.util.find_spec("bpy")
+if bpy_module is not None:
+    modulesNames.append('roofeus_addon')
+
 modulesFullNames = {}
 for currentModuleName in modulesNames:
     modulesFullNames[currentModuleName] = ('{}.{}'.format(__name__, currentModuleName))

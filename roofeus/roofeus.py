@@ -1,5 +1,6 @@
 from math import floor
-from roofeus.utils import sub_vectors, add_vectors, mul_vector_by_scalar, calc_vector_lineal_combination_params, Polygon
+from roofeus.utils import sub_vectors, add_vectors, mul_vector_by_scalar
+from roofeus.utils import calc_vector_lineal_combination_params, calculate_vertex_groups
 
 
 def create_2d_mesh(template, target):
@@ -18,16 +19,21 @@ def create_2d_mesh(template, target):
             row.append(projected_quad_vertex)
         projected_mesh.append(row)
 
-    polygon = Polygon([v.uvs for v in target])
+    _vg, vertex_groups_polygons = calculate_vertex_groups(target)
     for row in projected_mesh:
         for col in row:
             for v in range(0, len(col)):
-                if not polygon.contains(col[v]):
+                found = False
+                for polygon in vertex_groups_polygons:
+                    if polygon.contains(col[v]):
+                        found = True
+                if not found:
                     col[v] = ()
     return projected_mesh
 
 
 def transform_to_3d_mesh(target, mesh_2d):
+
     def transform_vertex(g, v):
         o = g[0]
         a_t = sub_vectors(g[1].uvs, o.uvs)
@@ -39,10 +45,7 @@ def transform_to_3d_mesh(target, mesh_2d):
         return add_vectors(add_vectors(v_a, v_b), o.coords)
 
     # Se calculan los subtriangulos de la cara si tiene >3 vértices
-    vertex_groups = []
-    for i in range(0, len(target) - 2):
-        vertex_groups.append((target[i], target[i + 1], target[i + 2]))
-    vertex_groups_polygons = [Polygon([v.uvs for v in group]) for group in vertex_groups]
+    vertex_groups, vertex_groups_polygons = calculate_vertex_groups(target)
 
     # Se itera sobre la malla proyectada
     mesh_3d = []
@@ -55,11 +58,20 @@ def transform_to_3d_mesh(target, mesh_2d):
                     quad_3d.append(())
                 else:
                     # Se itera sobre los subtriangulos de la cara para encontrar los vértices que lo contienen
+                    found = False
                     for i in range(0, len(vertex_groups_polygons)):
                         vg_polygon = vertex_groups_polygons[i]
                         if vg_polygon.contains(v):
                             # Se desproyecta el vértice respecto a los 3 vértices del objetivo que lo contienen
-                            quad_3d.append(transform_vertex(vertex_groups[i], v))
+                            if not found:
+                                quad_3d.append(transform_vertex(vertex_groups[i], v))
+                                found = True
+                            else:
+                                print("Warn: vértice encontrado en 2 subtriángulos")
+                    if not found:
+                        quad_3d.append(())
+                        print("Error: Se esperaba que el vértice estuviera contenido en una cara")
+
             row_3d.append(quad_3d)
         mesh_3d.append(row_3d)
     return mesh_3d
@@ -89,7 +101,7 @@ def build_faces(mesh_3d, template):
                     if vertex_idx < template.vertex_count:
                         # Self quad
                         self_quad = row[quad_index]
-                        face_vertex.append(self_quad[vertex_idx])
+                        face_vertex.append(self_quad[vertex_idx % template.vertex_count])
                     elif vertex_idx < template.vertex_count * 2:
                         # Right quad
                         if quad_index + 1 < len(row):
