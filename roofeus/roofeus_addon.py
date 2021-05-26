@@ -21,10 +21,14 @@ def build_target_list(bm):
     return target_list
 
 
-def create_result_mesh(bm, mesh):
-    vertex_list = rfs.get_vertex_list(mesh)
+def create_result_mesh(bm, vertex_list, faces, structure):
+    # vertex_list = rfs.get_vertex_list(structure)
+    bvertex_list = []
     for v in vertex_list:
-        bm.verts.new(v)
+        bvertex_list.append(bm.verts.new(v))
+
+    for face in faces:
+        bm.faces.new([bvertex_list[i] for i in face])
 
 
 class Roofeus(bpy.types.Operator):
@@ -41,8 +45,8 @@ class Roofeus(bpy.types.Operator):
         target_list = build_target_list(bm)
         template = rfsu.generate_test_template()  # TODO leer de fichero
         for target in target_list:
-            mesh, faces, faces_idx = rfs.create_mesh(template, target)
-            create_result_mesh(bm, mesh)
+            vertex_list, faces, structure, _faces_idx = rfs.create_mesh(template, target)
+            create_result_mesh(bm, vertex_list, faces, structure)
 
         bmesh.update_edit_mesh(obj.data)
         print("Done")

@@ -33,7 +33,6 @@ def create_2d_mesh(template, target):
 
 
 def transform_to_3d_mesh(target, mesh_2d):
-
     def transform_vertex(g, v):
         o = g[0]
         a_t = sub_vectors(g[1].uvs, o.uvs)
@@ -47,15 +46,18 @@ def transform_to_3d_mesh(target, mesh_2d):
     # Se calculan los subtriangulos de la cara si tiene >3 vértices
     vertex_groups, vertex_groups_polygons = calculate_vertex_groups(target)
 
+    vertex_list = []
+    vertex_index = 0
+
     # Se itera sobre la malla proyectada
-    mesh_3d = []
+    structure = []
     for row in mesh_2d:
-        row_3d = []
+        structure_row = []
         for quad in row:
-            quad_3d = []
+            structure_quad = []
             for v in quad:
                 if len(v) == 0:
-                    quad_3d.append(())
+                    structure_quad.append(None)
                 else:
                     # Se itera sobre los subtriangulos de la cara para encontrar los vértices que lo contienen
                     found = False
@@ -64,17 +66,19 @@ def transform_to_3d_mesh(target, mesh_2d):
                         if vg_polygon.contains(v):
                             # Se desproyecta el vértice respecto a los 3 vértices del objetivo que lo contienen
                             if not found:
-                                quad_3d.append(transform_vertex(vertex_groups[i], v))
+                                vertex_list.append(transform_vertex(vertex_groups[i], v))
+                                structure_quad.append(vertex_index)
+                                vertex_index += 1
                                 found = True
                             else:
                                 print("Warn: vértice encontrado en 2 subtriángulos")
                     if not found:
-                        quad_3d.append(())
+                        structure_quad.append(None)
                         print("Error: Se esperaba que el vértice estuviera contenido en una cara")
 
-            row_3d.append(quad_3d)
-        mesh_3d.append(row_3d)
-    return mesh_3d
+            structure_row.append(structure_quad)
+        structure.append(structure_row)
+    return vertex_list, structure
 
 
 def get_vertex_list(mesh):
@@ -87,11 +91,11 @@ def get_vertex_list(mesh):
     return vertex_list
 
 
-def build_faces(mesh_3d, template):
+def build_faces(structure, template):
     faces = []
     faces_index = []
-    for row_index in range(0, len(mesh_3d)):
-        row = mesh_3d[row_index]
+    for row_index in range(0, len(structure)):
+        row = structure[row_index]
         for quad_index in range(0, len(row)):
             for face_idx in range(0, len(template.faces)):
                 face = template.faces[face_idx]
@@ -109,16 +113,16 @@ def build_faces(mesh_3d, template):
                             face_vertex.append(right_quad[vertex_idx % template.vertex_count])
                     elif vertex_idx < template.vertex_count * 3:
                         # Bottom quad
-                        if row_index + 1 < len(mesh_3d):
-                            bottom_quad = mesh_3d[row_index + 1][quad_index]
+                        if row_index + 1 < len(structure):
+                            bottom_quad = structure[row_index + 1][quad_index]
                             face_vertex.append(bottom_quad[vertex_idx % template.vertex_count])
                     else:
                         # Diag quad
-                        if quad_index + 1 < len(row) and row_index + 1 < len(mesh_3d):
-                            diag_quad = mesh_3d[row_index + 1][quad_index + 1]
+                        if quad_index + 1 < len(row) and row_index + 1 < len(structure):
+                            diag_quad = structure[row_index + 1][quad_index + 1]
                             face_vertex.append(diag_quad[vertex_idx % template.vertex_count])
 
-                if all([len(i) > 0 for i in face_vertex]):
+                if all([i is not None for i in face_vertex]):
                     faces.append(face_vertex)
                     faces_index.append(face_idx)
     return faces, faces_index
@@ -126,6 +130,6 @@ def build_faces(mesh_3d, template):
 
 def create_mesh(template, target):
     mesh_2d = create_2d_mesh(template, target)
-    mesh = transform_to_3d_mesh(target, mesh_2d)
-    faces, faces_idx = build_faces(mesh, template)
-    return mesh, faces, faces_idx
+    vertex_list, structure = transform_to_3d_mesh(target, mesh_2d)
+    faces, faces_idx = build_faces(structure, template)
+    return vertex_list, faces, structure, faces_idx

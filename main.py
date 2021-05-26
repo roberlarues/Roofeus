@@ -61,14 +61,14 @@ def plot_mesh_2d(template, target, mesh):
     plt.show()
 
 
-def plot_faces(face_list, face_index, template):
+def plot_faces(vertex_list, face_list, face_index, template):
     coli = 0
     fig = plt.figure()
     ax = Axes3D(fig, auto_add_to_figure=False)
     fig.add_axes(ax)
 
     for i in range(0, len(face_list)):
-        coll = Poly3DCollection(face_list[i])
+        coll = Poly3DCollection([vertex_list[j] for j in face_list[i]])
         coll.set_color(template.face_colors[face_index[i]])
         ax.add_collection3d(coll)
         coli = coli + 1
@@ -85,6 +85,6 @@ if __name__ == '__main__':
     mesh_2d = rfs.create_2d_mesh(test_template, test_target)
     # plot_mesh_2d(test_template, test_target, mesh_2d)
 
-    mesh = rfs.transform_to_3d_mesh(test_target, mesh_2d)
-    faces, faces_idx = rfs.build_faces(mesh, test_template)
-    plot_faces(faces, faces_idx, test_template)
+    vertex_list, structure = rfs.transform_to_3d_mesh(test_target, mesh_2d)
+    faces, faces_idx = rfs.build_faces(structure, test_template)
+    plot_faces(vertex_list, faces, faces_idx, test_template)
