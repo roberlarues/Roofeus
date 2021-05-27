@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 import roofeus.roofeus as rfs
 import roofeus.models as rfsm
-from roofeus.utils import generate_test_template
+from roofeus.utils import read_template
 
 
 # Caras con >3 vértices deben de estar en orden para trianglestrip
@@ -76,7 +76,8 @@ def plot_faces(vertex_list, face_list, face_index, template):
 
 
 if __name__ == '__main__':
-    test_template = generate_test_template()
+    test_template = read_template('test_template.txt')
+    test_template.face_colors = [(1, 0, 0), (0, 1, 0), (0, 1, 0), (0, 0, 1), (1, 1, 0), (1, 1, 0)]
     # plot_template(test_template)
 
     test_target = prepare_target()

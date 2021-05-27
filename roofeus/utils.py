@@ -81,3 +81,36 @@ def generate_test_template():
     template.face_colors = [(1, 0, 0), (0, 1, 0), (0, 1, 0), (0, 0, 1), (1, 1, 0), (1, 1, 0)]
 
     return template
+
+
+def read_template(filename):
+    template = rfsm.RFTemplate()
+    with open(filename) as f:
+        content = f.readlines()
+        
+        all_vertex_readed = False
+        for line in content:
+            line = line.strip()
+            if line == 'f':
+                all_vertex_readed = True
+                template.calculate_ids()
+            elif not all_vertex_readed:
+                v_pos = line.split(',')
+                v = rfsm.RFTemplateVertex(float(v_pos[0]), float(v_pos[1]))
+                template.vertex.append(v)
+            else:
+                face_idx = line.split(',')
+                v_idx = []
+                for f_el in face_idx:
+                    if 'r' in f_el:
+                        v_idx.append(template.get_vertex_right(template.vertex[int(f_el.strip('r'))]))
+                    elif 'b' in f_el:
+                        v_idx.append(template.get_vertex_bottom(template.vertex[int(f_el.strip('b'))]))
+                    elif 'd' in f_el:
+                        v_idx.append(template.get_vertex_diag_quad(template.vertex[int(f_el.strip('d'))]))
+                    else:
+                        v_idx.append(template.vertex[int(f_el)])
+                f = rfsm.RFTemplateFace(v_idx[0], v_idx[1], v_idx[2])
+                template.faces.append(f)
+    return template
+
