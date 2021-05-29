@@ -31,31 +31,28 @@ def calc_vector_lineal_combination_params(a_t, b_t, v_t):
         b = (v_t[1] - a * a_t[1]) / b_t[1]
     return a, b
 
-# Asume orden trianglestrip
+
 def calculate_vertex_groups(target):
-    vertex_groups = []
-    for i in range(0, len(target) - 2):
-        vertex_groups.append((target[i], target[i + 1], target[i + 2]))
-    vertex_groups_polygons = [Polygon([v.uvs for v in group]) for group in vertex_groups]
-    return vertex_groups, vertex_groups_polygons
+    vertex_groups_polygons = [Polygon([v.uvs for v in target])]
+    return [target], vertex_groups_polygons
 
 
 class Polygon:
     def __init__(self, vertex_list):
         self.vertex_list = vertex_list
-        min_x = min([v[0] for v in vertex_list])
-        min_y = min([v[0] for v in vertex_list])
-        self.outer_vertex = (min_x - 1, min_y - 1)
 
     def contains(self, vertex):
-        found = False
-        b_v = sub_vectors(self.outer_vertex, vertex)
+        found = True
         for i in range(0, len(self.vertex_list)):
-            a_v = sub_vectors(self.vertex_list[(i + 1) % len(self.vertex_list)], self.vertex_list[i])
-            v_v = sub_vectors(vertex, self.vertex_list[i])
+            v = self.vertex_list[i]
+            va = self.vertex_list[(i + 1) % len(self.vertex_list)]  # Next
+            vb = self.vertex_list[(i + len(self.vertex_list) - 1) % len(self.vertex_list)]  # Previous
+            a_v = sub_vectors(va, v)
+            b_v = sub_vectors(vb, v)
+            v_v = sub_vectors(vertex, v)
             a, b = calc_vector_lineal_combination_params(a_v, b_v, v_v)
-            if 0 <= a <= 1 and b >= 0:
-                found = True
+            if not (0 <= a <= 1 and b >= -0.01):
+                found = False
         return found
 
 
