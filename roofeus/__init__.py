@@ -12,6 +12,7 @@ modulesNames = ['roofeus', 'models', 'utils']
 bpy_module = importlib.util.find_spec("bpy")
 if bpy_module is not None:
     modulesNames.append('roofeus_addon')
+    modulesNames.append('roofeus_panels')
 
 modulesFullNames = {}
 for currentModuleName in modulesNames:
