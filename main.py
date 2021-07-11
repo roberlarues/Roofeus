@@ -9,11 +9,12 @@ from roofeus.utils import read_template
 
 # Caras con >3 vértices deben de estar en orden para trianglestrip
 def prepare_target():
+    size = 1.5
     target = [
-        rfsm.RFTargetVertex(0, 0, 0, -1, -1),
-        rfsm.RFTargetVertex(0, 1, 1, -1, 1),
-        rfsm.RFTargetVertex(1, 0, 0, 1, -1),
-        rfsm.RFTargetVertex(1, 1, 1, 1, 1),
+        rfsm.RFTargetVertex(0, 0, 0, -size, -size),
+        rfsm.RFTargetVertex(0, 1, 1, -size, size),
+        rfsm.RFTargetVertex(1, 0, 0, size, -size),
+        # rfsm.RFTargetVertex(1, 1, 1, 1, 1),
     ]
     return target
 
@@ -54,25 +55,38 @@ def plot_mesh_2d(template, target, mesh):
     for row in mesh:
         for col in row:
             for v in col:
-                if len(v) > 0:
-                    projected_vertex_x.append(v[0])
-                    projected_vertex_y.append(v[1])
+                # if len(v) > 0:
+                if v.inside:
+                    projected_vertex_x.append(v.coords[0])
+                    projected_vertex_y.append(v.coords[1])
     plt.plot(projected_vertex_x, projected_vertex_y, 'yo')
     plt.show()
 
 
-def plot_faces(vertex_list, face_list, face_index, template):
+def plot_faces(vertex_list, face_list, face_index, template, target):
     coli = 0
     fig = plt.figure()
     ax = Axes3D(fig, auto_add_to_figure=False)
     fig.add_axes(ax)
 
     for i in range(0, len(face_list)):
-        coll = Poly3DCollection([vertex_list[j] for j in face_list[i]])
+        coll = Poly3DCollection([vertex_list[j] if j >= 0 else target[-1-j].coords for j in face_list[i]])
         coll.set_color(template.face_colors[face_index[i]])
         ax.add_collection3d(coll)
         coli = coli + 1
     plt.show()
+
+
+
+def plot_independent_faces(vertex_list, face_list, face_index, template, target):
+    for i in range(0, len(face_list)):
+        fig = plt.figure()
+        ax = Axes3D(fig, auto_add_to_figure=False)
+        fig.add_axes(ax)
+        coll = Poly3DCollection([vertex_list[j] if j >= 0 else target[j].coords for j in face_list[i]])
+        coll.set_color(template.face_colors[face_index[i]])
+        ax.add_collection3d(coll)
+        plt.show()
 
 
 if __name__ == '__main__':
@@ -86,6 +100,7 @@ if __name__ == '__main__':
     mesh_2d = rfs.create_2d_mesh(test_template, test_target)
     # plot_mesh_2d(test_template, test_target, mesh_2d)
 
-    vertex_list, structure = rfs.transform_to_3d_mesh(test_target, mesh_2d)
-    faces, faces_idx = rfs.build_faces(structure, test_template)
-    plot_faces(vertex_list, faces, faces_idx, test_template)
+    vertex_list, structure, vertex_list_2d = rfs.transform_to_3d_mesh(test_target, mesh_2d)
+    faces, faces_idx = rfs.build_faces(structure, test_template, test_target, vertex_list_2d)
+    # plot_independent_faces(vertex_list, faces, faces_idx, test_template, test_target)
+    plot_faces(vertex_list, faces, faces_idx, test_template, test_target)

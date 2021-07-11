@@ -55,17 +55,20 @@ class Roofeus(bpy.types.Operator):
 
         props = context.scene.roofeus
         template_file = str(bpy.path.abspath(props.template_file))
-        template = rfsu.read_template(template_file)
+        if template_file:
+            template = rfsu.read_template(template_file)
 
-        if template:  # TODO validate template
-            for target in target_list:
-                vertex_list, faces, structure, _faces_idx = rfs.create_mesh(template, target)
-                create_result_mesh(bm, vertex_list, faces, structure)
+            if template:  # TODO validate template
+                for target in target_list:
+                    vertex_list, faces, structure, _faces_idx = rfs.create_mesh(template, target)
+                    create_result_mesh(bm, vertex_list, faces, structure)
 
-            bmesh.update_edit_mesh(obj.data)
-            print("Done")
+                bmesh.update_edit_mesh(obj.data)
+                print("Done")
+            else:
+                print("Template not valid")
         else:
-            print("Template not valid")
+            print("No template file selected")
 
         return {'FINISHED'}
 

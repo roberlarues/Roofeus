@@ -1,28 +1,33 @@
+
+
 class RFTargetVertex:
+    id_neg = -1
+
     def __init__(self, x, y, z, u, v):
-        self.ident = 0
-        self.coords = (x, y, z)
-        self.uvs = (u, v)
+        self.ident = RFTargetVertex.id_neg  # int
+        RFTargetVertex.id_neg -= 1
+        self.coords = (x, y, z)  # (float, float, float)
+        self.uvs = (u, v)  # (float, float)
 
 
 class RFTemplateFace:
     def __init__(self, a, b, c):
-        self.vertex = (a, b, c)
+        self.vertex = (a, b, c)  # (int, int, int)
 
 
 class RFTemplateVertex:
     def __init__(self, x, y):
-        self.ident = 0
-        self.coords = (x, y)
+        self.ident = 0  # int
+        self.coords = (x, y)  # (float, float)
 
 
 class RFTemplate:
     def __init__(self):
-        self.vertex_count = 0
-        self.total_vertex_count = 0
-        self.vertex = []
-        self.faces = []
-        self.face_colors = []
+        self.vertex_count = 0  # int
+        self.total_vertex_count = 0  # int
+        self.vertex = []  # RFTemplateVertex[]
+        self.faces = []  # RFTemplateFace[]
+        self.face_colors = []  # (r,g,b)[]
 
     def calculate_ids(self):
         self.total_vertex_count = 0
@@ -66,3 +71,16 @@ class RFTemplate:
 
     def visible_vertex(self):
         return self.vertex[:self.vertex_count]
+
+
+class RFProjected2dVertex:
+    def __init__(self, x, y):
+        self.coords = (x, y)  # (float, float)
+        self.inside = False
+
+
+class RFProjectedQuadVertex:
+    def __init__(self, index, inside):
+        self.index = index  # number
+        self.inside = inside  # boolean
+

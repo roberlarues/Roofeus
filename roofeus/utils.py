@@ -1,4 +1,5 @@
 import roofeus.models as rfsm
+import math
 
 
 def add_vectors(v1, v2):
@@ -7,6 +8,51 @@ def add_vectors(v1, v2):
 
 def sub_vectors(v1, v2):
     return tuple([v1[i] - v2[i] for i in range(0, len(v1))])
+
+
+def size_vector(v):
+    return math.sqrt(sum([i * i for i in v]))
+
+
+# https://es.wikipedia.org/wiki/Intersecci%C3%B3n_de_dos_rectas
+def calc_intersection(r1, r2):
+    p1 = r1[0]
+    p2 = r1[1]
+    p3 = r2[0]
+    p4 = r2[1]
+
+    x1 = p1[0]
+    y1 = p1[1]
+    x2 = p2[0]
+    y2 = p2[1]
+    x3 = p3[0]
+    y3 = p3[1]
+    x4 = p4[0]
+    y4 = p4[1]
+    denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+    if denom == 0:
+        # Son paralelas
+        return None
+    else:
+        tmp_x = (x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)
+        tmp_y = (x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)
+        return tuple([tmp_x / denom, tmp_y / denom])
+
+
+def has_intersection(r1, r2, threshold=0.01):
+    intersection_point = calc_intersection(r1, r2)
+    if intersection_point is None:
+        return False
+
+    mult = 1 + threshold
+    to_intersection_r1_1 = sub_vectors(intersection_point, r1[0])
+    to_intersection_r1_2 = sub_vectors(intersection_point, r1[1])
+    to_intersection_r2_1 = sub_vectors(intersection_point, r2[0])
+    to_intersection_r2_2 = sub_vectors(intersection_point, r2[1])
+    r1_size = size_vector(sub_vectors(r1[1], r1[0]))
+    r2_size = size_vector(sub_vectors(r2[1], r2[0]))
+    return size_vector(to_intersection_r1_1) <= r1_size * mult and size_vector(to_intersection_r1_2) <= r1_size * mult \
+        and size_vector(to_intersection_r2_1) <= r2_size * mult and size_vector(to_intersection_r2_2) <= r2_size * mult
 
 
 def mul_vector_by_scalar(vector, scalar):
@@ -84,7 +130,7 @@ def read_template(filename):
     template = rfsm.RFTemplate()
     with open(filename) as f:
         content = f.readlines()
-        
+
         all_vertex_readed = False
         for line in content:
             line = line.strip()
@@ -110,4 +156,3 @@ def read_template(filename):
                 f = rfsm.RFTemplateFace(v_idx[0], v_idx[1], v_idx[2])
                 template.faces.append(f)
     return template
-
