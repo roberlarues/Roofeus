@@ -25,17 +25,22 @@ def build_target_list(bm):
     return target_list, affected_faces
 
 
-def create_result_mesh(bm, vertex_list, faces, target):
+def create_result_mesh(bm, vertex_list, faces, target, material_index):
     # vertex_list = rfs.get_vertex_list(structure)
     bvertex_list = []
     for v in vertex_list:
         if v.inside:
             bvertex_list.append(bm.verts.new(v.coords_3d))
         else:
-            bvertex_list.append(None)
+            bvertex_list.append(None)  # Append to preserve index relation
 
+
+    uv_layer = bm.loops.layers.uv.verify()
     for face in faces:
-        bm.faces.new([bvertex_list[i] if i >= 0 else target[-1-i].bl_vertex for i in face])
+        bl_face = bm.faces.new([bvertex_list[i] if i >= 0 else target[-1-i].bl_vertex for i in face])
+        bl_face.material_index = material_index
+        for loop, i in zip(bl_face.loops, face):
+            loop[uv_layer].uv = vertex_list[i].coords_2d if i >= 0 else target[-1-i].uvs
 
 
 def on_template_file_updated(self, context):
@@ -66,9 +71,9 @@ class Roofeus(bpy.types.Operator):
             template = rfsu.read_template(template_file)
 
             if template:  # TODO validate template
-                for target in target_list:
+                for target, orig_face in zip(target_list, original_faces):
                     vertex_list, faces, structure, _faces_idx = rfs.create_mesh(template, target)
-                    create_result_mesh(bm, vertex_list, faces, target)
+                    create_result_mesh(bm, vertex_list, faces, target, orig_face.material_index)
 
                 bmesh.update_edit_mesh(obj.data)
 
