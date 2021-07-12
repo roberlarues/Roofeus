@@ -70,7 +70,7 @@ def plot_faces(vertex_list, face_list, face_index, template, target):
     fig.add_axes(ax)
 
     for i in range(0, len(face_list)):
-        coll = Poly3DCollection([vertex_list[j] if j >= 0 else target[-1-j].coords for j in face_list[i]])
+        coll = Poly3DCollection([vertex_list[j].coords_3d if j >= 0 else target[-1-j].coords for j in face_list[i]])
         coll.set_color(template.face_colors[face_index[i]])
         ax.add_collection3d(coll)
         coli = coli + 1
@@ -100,7 +100,7 @@ if __name__ == '__main__':
     mesh_2d = rfs.create_2d_mesh(test_template, test_target)
     # plot_mesh_2d(test_template, test_target, mesh_2d)
 
-    vertex_list, structure, vertex_list_2d = rfs.transform_to_3d_mesh(test_target, mesh_2d)
-    faces, faces_idx = rfs.build_faces(structure, test_template, test_target, vertex_list_2d)
+    vertex_list, structure = rfs.transform_to_3d_mesh(test_target, mesh_2d)
+    faces, faces_idx = rfs.build_faces(structure, test_template, test_target, vertex_list)
     # plot_independent_faces(vertex_list, faces, faces_idx, test_template, test_target)
     plot_faces(vertex_list, faces, faces_idx, test_template, test_target)

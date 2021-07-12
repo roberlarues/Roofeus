@@ -1,5 +1,3 @@
-
-
 class RFTargetVertex:
     id_neg = -1
 
@@ -79,8 +77,10 @@ class RFProjected2dVertex:
         self.inside = False
 
 
-class RFProjectedQuadVertex:
-    def __init__(self, index, inside):
+class RFVertexData:
+    def __init__(self, index, coords_2d, coords_3d, inside):
         self.index = index  # number
+        self.coords_2d = coords_2d  # (float, float)
+        self.coords_3d = coords_3d  # (float, float, float)
         self.inside = inside  # boolean
 

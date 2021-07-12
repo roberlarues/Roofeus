@@ -1,7 +1,9 @@
 from math import floor
+
+import roofeus.models
 from roofeus.utils import sub_vectors, add_vectors, mul_vector_by_scalar, size_vector, has_intersection
 from roofeus.utils import calc_vector_lineal_combination_params, calculate_vertex_groups
-from roofeus.models import RFProjected2dVertex, RFProjectedQuadVertex
+from roofeus.models import RFVertexData, RFProjected2dVertex
 
 # import matplotlib.pyplot as plt  # TODO quitar
 
@@ -73,7 +75,7 @@ def transform_to_3d_mesh(target, mesh_2d):
     vertex_groups, vertex_groups_polygons = calculate_vertex_groups(target)
 
     vertex_list = []
-    vertex_list_2d = []
+    # vertex_list_2d = []
     vertex_index = 0
 
     # Se itera sobre la malla proyectada
@@ -87,12 +89,13 @@ def transform_to_3d_mesh(target, mesh_2d):
                 # Se itera sobre los subtriangulos de la cara para encontrar los vértices que lo contienen
                 found = False
                 for i in range(0, len(vertex_groups_polygons)):
-                    vg_polygon = vertex_groups_polygons[i]
                     # Se desproyecta el vértice respecto a los 3 vértices del objetivo que lo contienen
                     if not found:
-                        vertex_list_2d.append(v.coords)
-                        vertex_list.append(transform_vertex(vertex_groups[i], v.coords))
-                        structure_quad.append(RFProjectedQuadVertex(vertex_index, v.inside))
+                        # vertex_list_2d.append(v.coords)
+                        vertex_list.append(RFVertexData(vertex_index, v.coords,
+                                                        transform_vertex(vertex_groups[i], v.coords), v.inside))
+                        # structure_quad.append(RFProjectedQuadVertex(vertex_index, v.inside))
+                        structure_quad.append(vertex_index)
                         vertex_index += 1
                         found = True
                     else:
@@ -103,10 +106,10 @@ def transform_to_3d_mesh(target, mesh_2d):
 
             structure_row.append(structure_quad)
         structure.append(structure_row)
-    return vertex_list, structure, vertex_list_2d
+    return vertex_list, structure
 
 
-def build_faces(structure, template, target, vertex_list_2d):
+def build_faces(structure, template, target, vertex_list):
     """
     Crea las caras para la estructura y patrón indicados
     :param structure: fila[]: columna[]; cuadrante[]: vertice: int - estructura interna de la malla
@@ -148,10 +151,10 @@ def build_faces(structure, template, target, vertex_list_2d):
                             diag_quad = structure[row_index + 1][quad_index + 1]
                             face_vertex.append(diag_quad[vertex_idx % template.vertex_count])
 
-                if all([i.inside for i in face_vertex]):
-                    faces.append([i.index for i in face_vertex])
+                if all([vertex_list[i].inside for i in face_vertex]):
+                    faces.append(face_vertex)
                     faces_index.append(face_idx)
-                elif not all([not i.inside for i in face_vertex]):
+                elif not all([not vertex_list[i].inside for i in face_vertex]):
                     faces_half.append(face_vertex)
 
     # Part 2 - Fill between unconnected vertex and target
@@ -168,7 +171,7 @@ def build_faces(structure, template, target, vertex_list_2d):
         face_inside = []
         outside = None
         for v in half_face:
-            if v.inside:
+            if vertex_list[v].inside:
                 face_inside.append(v)
             else:
                 outside = v
@@ -193,8 +196,8 @@ def build_faces(structure, template, target, vertex_list_2d):
     # Part 2.3 - foreach io in pairs_in_out -> calcPOF()
     def calc_nearest_edge(edges, io):
         nearest = None
-        inside_p = vertex_list_2d[io.inside.index]
-        outside_p = vertex_list_2d[io.outside.index]
+        inside_p = vertex_list[io.inside].coords_2d
+        outside_p = vertex_list[io.outside].coords_2d
         edge_index = 0
         for edge in edges:
             if has_intersection((edge.v1.uvs, edge.v2.uvs), (inside_p, outside_p), 0.01):
@@ -208,8 +211,8 @@ def build_faces(structure, template, target, vertex_list_2d):
 
     for in_out in pairs_in_out:
         nearest_edge = calc_nearest_edge(edge_list, in_out)
-        # inside_p = vertex_list_2d[in_out.inside.index]
-        # outside_p = vertex_list_2d[in_out.outside.index]
+        # inside_p = vertex_list_2d[in_out.inside]
+        # outside_p = vertex_list_2d[in_out.outside]
         if nearest_edge is None:
             print('IO pair with no nearest edge')
             # plt.plot([inside_p[0], outside_p[0]], [inside_p[1], outside_p[1]], 'yo-')
@@ -220,7 +223,7 @@ def build_faces(structure, template, target, vertex_list_2d):
         # in_out.nearest_vertex = calc_nearest_vertex(nearest_edge, in_out)
         contains = False
         for io in nearest_edge.attached_in_outs:
-            if io.inside.index == in_out.inside.index:
+            if io.inside == in_out.inside:
                 contains = True
                 break
         if not contains:
@@ -229,21 +232,23 @@ def build_faces(structure, template, target, vertex_list_2d):
 
     # Part 2.4 - foreach z in Z -> fillZ
     def order_from_distance_to(vertex_target_coords, io_list):
-        return sorted(io_list, key=lambda io: size_vector(sub_vectors(vertex_target_coords, vertex_list_2d[io.inside.index])))
-
-    def is_visible(ref_coords, vertex, added):
-        visible = True
-        if len(added) > 1:
-            for i in range(0, len(added) - 1):
-                if has_intersection((vertex_list_2d[added[i]], vertex_list_2d[added[i+1]]), (ref_coords, vertex), -0.05):
-                    visible = False
-                    break
-        return visible
+        return sorted(io_list,
+                      key=lambda io: size_vector(sub_vectors(vertex_target_coords, vertex_list[io.inside].coords_2d)))
 
     def build_pending_faces(v1, v2, pending_list):
-        v1_coords = vertex_list_2d[v1.index] if type(v1) is RFProjectedQuadVertex else v1.uvs
-        v1_index = v1.index if type(v1) is RFProjectedQuadVertex else v1.ident
-        v2_index = v2.index if type(v2) is RFProjectedQuadVertex else v2.ident
+        def is_visible(ref_coords, vertex, added):
+            visible = True
+            if len(added) > 1:
+                for i in range(0, len(added) - 1):
+                    if has_intersection((vertex_list[added[i]].coords_2d, vertex_list[added[i + 1]].coords_2d),
+                                        (ref_coords, vertex), -0.05):
+                        visible = False
+                        break
+            return visible
+
+        v1_coords = v1.uvs if type(v1) is roofeus.models.RFTargetVertex else vertex_list[v1].coords_2d
+        v1_index = v1.ident if type(v1) is roofeus.models.RFTargetVertex else v1
+        v2_index = v2.ident if type(v2) is roofeus.models.RFTargetVertex else v2
         pending = []
         added = []
         last = None
@@ -252,20 +257,20 @@ def build_faces(structure, template, target, vertex_list_2d):
         pending_face_idx = []
         for v in pending_list:
             v_count += 1
-            if is_visible(v1_coords, vertex_list_2d[v.inside.index], added):
+            if is_visible(v1_coords, vertex_list[v.inside].coords_2d, added):
                 if len(pending) > 0:
                     pf, pfi = build_pending_faces(last, v.inside, pending)
                     pending_faces.extend(pf)
                     pending_face_idx.extend(pfi)
                     pending = []
                 if last is not None:
-                    pending_faces.append([last.index, v1_index, v.inside.index])
+                    pending_faces.append([last, v1_index, v.inside])
                     pending_face_idx.append(0)  # No importa
                 if v_count == len(pending_list):
-                    pending_faces.append([v1_index, v2_index, v.inside.index])
+                    pending_faces.append([v1_index, v2_index, v.inside])
                     pending_face_idx.append(0)  # No importa
                 last = v.inside
-                added.append(v.inside.index)
+                added.append(v.inside)
             else:
                 pending.append(v)
 
@@ -273,7 +278,7 @@ def build_faces(structure, template, target, vertex_list_2d):
             pf, pfi = build_pending_faces(last, v2, pending)
             pending_faces.extend(pf)
             pending_face_idx.extend(pfi)
-            pending_faces.append([v1_index, v2_index, last.index])
+            pending_faces.append([v1_index, v2_index, last])
             pending_face_idx.append(0)  # No importa
         return pending_faces, pending_face_idx
 
@@ -297,6 +302,6 @@ def create_mesh(template, target):
         faces_idx: - Índices de las caras (?)
     """
     mesh_2d = create_2d_mesh(template, target)
-    vertex_list, structure, vertex_list_2d = transform_to_3d_mesh(target, mesh_2d)
-    faces, faces_idx = build_faces(structure, template, target, vertex_list_2d)
+    vertex_list, structure = transform_to_3d_mesh(target, mesh_2d)
+    faces, faces_idx = build_faces(structure, template, target, vertex_list)
     return vertex_list, faces, structure, faces_idx

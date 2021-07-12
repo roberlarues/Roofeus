@@ -5,6 +5,7 @@ import roofeus.utils as rfsu
 
 
 def build_target_list(bm):
+    rfsm.RFTargetVertex.id_neg = -1
     target_list = []
     uv_layer = bm.loops.layers.uv.verify()
     for face in bm.faces:
@@ -14,6 +15,7 @@ def build_target_list(bm):
                 coords = loop.vert.co
                 uv = loop[uv_layer].uv
                 target_vertex = rfsm.RFTargetVertex(coords[0], coords[1], coords[2], uv[0], uv[1])
+                target_vertex.bl_vertex = loop.vert
                 target.append(target_vertex)
 
             target_list.append(target)
@@ -21,14 +23,17 @@ def build_target_list(bm):
     return target_list
 
 
-def create_result_mesh(bm, vertex_list, faces, structure):
+def create_result_mesh(bm, vertex_list, faces, target):
     # vertex_list = rfs.get_vertex_list(structure)
     bvertex_list = []
     for v in vertex_list:
-        bvertex_list.append(bm.verts.new(v))
+        if v.inside:
+            bvertex_list.append(bm.verts.new(v.coords_3d))
+        else:
+            bvertex_list.append(None)
 
     for face in faces:
-        bm.faces.new([bvertex_list[i] for i in face])
+        bm.faces.new([bvertex_list[i] if i >= 0 else target[-1-i].bl_vertex for i in face])
 
 
 def on_template_file_updated(self, context):
@@ -61,7 +66,7 @@ class Roofeus(bpy.types.Operator):
             if template:  # TODO validate template
                 for target in target_list:
                     vertex_list, faces, structure, _faces_idx = rfs.create_mesh(template, target)
-                    create_result_mesh(bm, vertex_list, faces, structure)
+                    create_result_mesh(bm, vertex_list, faces, target)
 
                 bmesh.update_edit_mesh(obj.data)
                 print("Done")
