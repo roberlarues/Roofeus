@@ -8,6 +8,7 @@ def build_target_list(bm):
     rfsm.RFTargetVertex.id_neg = -1
     target_list = []
     uv_layer = bm.loops.layers.uv.verify()
+    affected_faces = []
     for face in bm.faces:
         if face.select:
             target = []
@@ -19,8 +20,9 @@ def build_target_list(bm):
                 target.append(target_vertex)
 
             target_list.append(target)
+            affected_faces.append(face)
     print("Target list:", target_list)
-    return target_list
+    return target_list, affected_faces
 
 
 def create_result_mesh(bm, vertex_list, faces, target):
@@ -56,7 +58,7 @@ class Roofeus(bpy.types.Operator):
         obj = context.object
         me = obj.data
         bm = bmesh.from_edit_mesh(me)
-        target_list = build_target_list(bm)
+        target_list, original_faces = build_target_list(bm)
 
         props = context.scene.roofeus
         template_file = str(bpy.path.abspath(props.template_file))
@@ -69,6 +71,8 @@ class Roofeus(bpy.types.Operator):
                     create_result_mesh(bm, vertex_list, faces, target)
 
                 bmesh.update_edit_mesh(obj.data)
+
+                bmesh.ops.delete(bm, geom=original_faces, context='FACES_ONLY')
                 print("Done")
             else:
                 print("Template not valid")
