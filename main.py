@@ -7,19 +7,31 @@ import roofeus.models as rfsm
 from roofeus.utils import read_template
 
 
-# Caras con >3 vértices deben de estar en orden para trianglestrip
+##################################
+# Run this file to test roofeus! #
+##################################
+
+
 def prepare_target():
-    size = 1.5
+    """
+    Creates a example target face
+    :return: list of RFTargetVertex
+    """
+    size = 4
     target = [
         rfsm.RFTargetVertex(0, 0, 0, -size, -size),
         rfsm.RFTargetVertex(0, 1, 1, -size, size),
+        rfsm.RFTargetVertex(1, 1, 1, size, size),
         rfsm.RFTargetVertex(1, 0, 0, size, -size),
-        # rfsm.RFTargetVertex(1, 1, 1, 1, 1),
     ]
     return target
 
 
 def plot_template(template):
+    """
+    Plots the template shape
+    :param template: template to plot
+    """
     fig = plt.figure()
     ax = Axes3D(fig, auto_add_to_figure=False)
     fig.add_axes(ax)
@@ -32,6 +44,10 @@ def plot_template(template):
 
 
 def plot_target(target):
+    """
+    Plots the target face
+    :param target: target face
+    """
     fig = plt.figure()
     ax = Axes3D(fig, auto_add_to_figure=False)
     fig.add_axes(ax)
@@ -43,6 +59,12 @@ def plot_target(target):
 
 
 def plot_mesh_2d(template, target, mesh):
+    """
+    Plots the temporal projected mesh
+    :param template: template
+    :param target: target face
+    :param mesh: projected mesh
+    """
     template_vertex_x = [v.coords[0] for v in template.visible_vertex()]
     template_vertex_y = [v.coords[1] for v in template.visible_vertex()]
     plt.plot(template_vertex_x, template_vertex_y, 'ro-')
@@ -55,7 +77,6 @@ def plot_mesh_2d(template, target, mesh):
     for row in mesh:
         for col in row:
             for v in col:
-                # if len(v) > 0:
                 if v.inside:
                     projected_vertex_x.append(v.coords[0])
                     projected_vertex_y.append(v.coords[1])
@@ -63,30 +84,26 @@ def plot_mesh_2d(template, target, mesh):
     plt.show()
 
 
-def plot_faces(vertex_list, face_list, face_index, template, target):
+def plot_faces(v_list, face_list, face_index, template, target):
+    """
+    Plots the output faces
+    :param v_list: vertex list
+    :param face_list: face list
+    :param face_index: face index list (just for colour)
+    :param template: template
+    :param target: target face
+    """
     coli = 0
     fig = plt.figure()
     ax = Axes3D(fig, auto_add_to_figure=False)
     fig.add_axes(ax)
 
     for i in range(0, len(face_list)):
-        coll = Poly3DCollection([vertex_list[j].coords_3d if j >= 0 else target[-1-j].coords for j in face_list[i]])
+        coll = Poly3DCollection([v_list[j].coords_3d if j >= 0 else target[-1-j].coords for j in face_list[i]])
         coll.set_color(template.face_colors[face_index[i]])
         ax.add_collection3d(coll)
         coli = coli + 1
     plt.show()
-
-
-
-def plot_independent_faces(vertex_list, face_list, face_index, template, target):
-    for i in range(0, len(face_list)):
-        fig = plt.figure()
-        ax = Axes3D(fig, auto_add_to_figure=False)
-        fig.add_axes(ax)
-        coll = Poly3DCollection([vertex_list[j] if j >= 0 else target[j].coords for j in face_list[i]])
-        coll.set_color(template.face_colors[face_index[i]])
-        ax.add_collection3d(coll)
-        plt.show()
 
 
 if __name__ == '__main__':
@@ -102,5 +119,4 @@ if __name__ == '__main__':
 
     vertex_list, structure = rfs.transform_to_3d_mesh(test_target, mesh_2d)
     faces, faces_idx = rfs.build_faces(structure, test_template, test_target, vertex_list)
-    # plot_independent_faces(vertex_list, faces, faces_idx, test_template, test_target)
     plot_faces(vertex_list, faces, faces_idx, test_template, test_target)

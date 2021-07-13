@@ -5,6 +5,11 @@ import roofeus.utils as rfsu
 
 
 def build_target_list(bm):
+    """
+    Builds roofeus target data from selected blender face
+    :param bm: selected object
+    :return: roofeus target data and selected blender faces
+    """
     rfsm.RFTargetVertex.id_neg = -1
     target_list = []
     uv_layer = bm.loops.layers.uv.verify()
@@ -21,19 +26,24 @@ def build_target_list(bm):
 
             target_list.append(target)
             affected_faces.append(face)
-    print("Target list:", target_list)
     return target_list, affected_faces
 
 
 def create_result_mesh(bm, vertex_list, faces, target, material_index):
-    # vertex_list = rfs.get_vertex_list(structure)
+    """
+    Creates blender data from roofeus output
+    :param bm: blender object
+    :param vertex_list: roofeus output vertex
+    :param faces: roofeus output faces
+    :param target: target face
+    :param material_index: material index to assign to the new faces
+    """
     bvertex_list = []
     for v in vertex_list:
         if v.inside:
             bvertex_list.append(bm.verts.new(v.coords_3d))
         else:
             bvertex_list.append(None)  # Append to preserve index relation
-
 
     uv_layer = bm.loops.layers.uv.verify()
     for face in faces:
@@ -44,11 +54,13 @@ def create_result_mesh(bm, vertex_list, faces, target, material_index):
 
 
 def on_template_file_updated(self, context):
+    """Executed when template file is updated"""
     props = context.scene.roofeus
     print("Updated Template", str(bpy.path.abspath(props.template_file)))
 
 
 class RoofeusProperties(bpy.types.PropertyGroup):
+    """Roofeus properties"""
     template_file: bpy.props.StringProperty(name="Template File", subtype="FILE_PATH", update=on_template_file_updated)
 
 
@@ -69,10 +81,9 @@ class Roofeus(bpy.types.Operator):
         template_file = str(bpy.path.abspath(props.template_file))
         if template_file:
             template = rfsu.read_template(template_file)
-
-            if template:  # TODO validate template
+            if template:
                 for target, orig_face in zip(target_list, original_faces):
-                    vertex_list, faces, structure, _faces_idx = rfs.create_mesh(template, target)
+                    vertex_list, faces = rfs.create_mesh(template, target)
                     create_result_mesh(bm, vertex_list, faces, target, orig_face.material_index)
 
                 bmesh.update_edit_mesh(obj.data)

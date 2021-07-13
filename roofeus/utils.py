@@ -3,36 +3,51 @@ import math
 
 
 def add_vectors(v1, v2):
+    """
+    Adds 2 vector
+    :param v1: vector 1
+    :param v2: vector 2
+    :return: v1 + v2
+    """
     return tuple([v1[i] + v2[i] for i in range(0, len(v1))])
 
 
 def sub_vectors(v1, v2):
+    """
+    Subtracts v2 to v1
+    :param v1: vector 1
+    :param v2: vector 2
+    :return: v1 +-v2
+    """
     return tuple([v1[i] - v2[i] for i in range(0, len(v1))])
 
 
 def size_vector(v):
+    """
+    Returns the l2 norm of a vector
+    :param v: vector
+    :return: norm l2
+    """
     return math.sqrt(sum([i * i for i in v]))
 
 
-# https://es.wikipedia.org/wiki/Intersecci%C3%B3n_de_dos_rectas
 def calc_intersection(r1, r2):
-    p1 = r1[0]
-    p2 = r1[1]
-    p3 = r2[0]
-    p4 = r2[1]
+    """
+    Calculates the intersection of 2 rects
+    Maths from https://es.wikipedia.org/wiki/Intersecci%C3%B3n_de_dos_rectas
+    :param r1:
+    :param r2:
+    :return:
+    """
+    p1, p2, p3, p4 = r1[0], r1[1], r2[0], r2[1]
 
-    x1 = p1[0]
-    y1 = p1[1]
-    x2 = p2[0]
-    y2 = p2[1]
-    x3 = p3[0]
-    y3 = p3[1]
-    x4 = p4[0]
-    y4 = p4[1]
+    x1, y1 = p1[0], p1[1]
+    x2, y2 = p2[0], p2[1]
+    x3, y3 = p3[0], p3[1]
+    x4, y4 = p4[0], p4[1]
     denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
     if denom == 0:
-        # Son paralelas
-        return None
+        return None  # parallel
     else:
         tmp_x = (x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)
         tmp_y = (x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)
@@ -40,6 +55,13 @@ def calc_intersection(r1, r2):
 
 
 def has_intersection(r1, r2, threshold=0.01):
+    """
+    Checks if 2 segments of different rects intersects
+    :param r1: segment 1
+    :param r2: segment 2
+    :param threshold: threshold to consider no intersection
+    :return: true if intersects
+    """
     intersection_point = calc_intersection(r1, r2)
     if intersection_point is None:
         return False
@@ -56,10 +78,23 @@ def has_intersection(r1, r2, threshold=0.01):
 
 
 def mul_vector_by_scalar(vector, scalar):
+    """
+    Multiplies a vector by a scalar
+    :param vector: vector
+    :param scalar: scalar
+    :return: vector * scalar
+    """
     return tuple([value * scalar for value in vector])
 
 
 def calc_vector_lineal_combination_params(a_t, b_t, v_t):
+    """
+    Calculates the linear combination of 2 vector (a_t and b_t) to be a third (v_t).
+    :param a_t: vector 1
+    :param b_t: vector 2
+    :param v_t: target vector
+    :return: a, b values that makes a * a_t + b * b_t == v_t
+    """
     divider = (a_t[1] * b_t[0] - a_t[0] * b_t[1])
     if divider == 0:
         divider_2 = (v_t[1] * b_t[0] - v_t[0] * b_t[1])
@@ -79,15 +114,26 @@ def calc_vector_lineal_combination_params(a_t, b_t, v_t):
 
 
 def calculate_vertex_groups(target):
-    vertex_groups_polygons = [Polygon([v.uvs for v in target])]
-    return [target], vertex_groups_polygons
+    """
+    Returns polygon data from a target face
+    :param target: target face
+    :return: polygon
+    """
+    return Polygon([v.uvs for v in target])
 
 
 class Polygon:
+    """2D Polygon"""
+
     def __init__(self, vertex_list):
         self.vertex_list = vertex_list
 
     def contains(self, vertex):
+        """
+        Checks if the vertex is inside the polygon
+        :param vertex: vertex
+        :return: true if the vertex is inside
+        """
         found = True
         for i in range(0, len(self.vertex_list)):
             v = self.vertex_list[i]
@@ -102,42 +148,23 @@ class Polygon:
         return found
 
 
-def generate_test_template():
-    template = rfsm.RFTemplate()
-    v1 = rfsm.RFTemplateVertex(0.5, 0.2)
-    v2 = rfsm.RFTemplateVertex(0.2, 0.8)
-    v3 = rfsm.RFTemplateVertex(0.8, 0.8)
-
-    template.vertex.append(v1)
-    template.vertex.append(v2)
-    template.vertex.append(v3)
-
-    template.calculate_ids()
-
-    template.faces.append(rfsm.RFTemplateFace(v1, v2, v3))
-    template.faces.append(rfsm.RFTemplateFace(v1, template.get_vertex_right(v1), v3))
-    template.faces.append(rfsm.RFTemplateFace(v3, template.get_vertex_right(v1), template.get_vertex_right(v2)))
-    template.faces.append(rfsm.RFTemplateFace(v2, v3, template.get_vertex_bottom(v1)))
-    template.faces.append(rfsm.RFTemplateFace(v3, template.get_vertex_right(v2), template.get_vertex_diag_quad(v1)))
-    template.faces.append(rfsm.RFTemplateFace(v3, template.get_vertex_bottom(v1), template.get_vertex_diag_quad(v1)))
-
-    template.face_colors = [(1, 0, 0), (0, 1, 0), (0, 1, 0), (0, 0, 1), (1, 1, 0), (1, 1, 0)]
-
-    return template
-
-
 def read_template(filename):
+    """
+    Reads a template from file
+    :param filename: filename of the template
+    :return: template data
+    """
     template = rfsm.RFTemplate()
     with open(filename) as f:
         content = f.readlines()
 
-        all_vertex_readed = False
+        all_vertex_read = False
         for line in content:
             line = line.strip()
             if line == 'f':
-                all_vertex_readed = True
+                all_vertex_read = True
                 template.calculate_ids()
-            elif not all_vertex_readed:
+            elif not all_vertex_read:
                 v_pos = line.split(',')
                 v = rfsm.RFTemplateVertex(float(v_pos[0]), float(v_pos[1]))
                 template.vertex.append(v)
