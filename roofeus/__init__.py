@@ -1,5 +1,6 @@
 import sys
 import importlib
+from importlib import util
 
 bl_info = {
     "name": "Roofeus",
@@ -9,7 +10,7 @@ bl_info = {
 }
 
 modulesNames = ['roofeus', 'models', 'utils']
-bpy_module = importlib.util.find_spec("bpy")
+bpy_module = util.find_spec("bpy")
 if bpy_module is not None:
     modulesNames.append('roofeus_addon')
     modulesNames.append('roofeus_panels')
