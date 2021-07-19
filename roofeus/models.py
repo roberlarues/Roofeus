@@ -63,7 +63,7 @@ class RFTemplate:
         return self.vertex[v.ident + self.vertex_count * 3]
 
     def visible_vertex(self):
-        return self.vertex[:self.vertex_count]
+        return self.vertex[:self.vertex_count] if self.vertex_count > 0 else self.vertex
 
 
 class RFTemplateFace:
@@ -79,7 +79,7 @@ class RFTemplateVertex:
     Vertex (2d) of the template
     """
     def __init__(self, x, y):
-        self.ident = 0  # int
+        self.ident = -1  # int
         self.coords = (x, y)  # (float, float)
 
 

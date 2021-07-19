@@ -183,3 +183,34 @@ def read_template(filename):
                 f = rfsm.RFTemplateFace(v_idx[0], v_idx[1], v_idx[2])
                 template.faces.append(f)
     return template
+
+
+def write_template(filename, template):
+    """
+    Writes a template to a file
+    :param filename: filename of the template
+    :param template: template to save
+    """
+    with open(filename, 'w') as f:
+        for v in template.visible_vertex():
+            f.write(f"{v.coords[0]},{v.coords[1]}\n")
+        f.write("f\n")
+
+        def get_vertex_ref_text(vertex):
+            text = ""
+            if vertex.ident < template.vertex_count:
+                text = str(vertex.ident)
+            elif vertex.ident < template.vertex_count * 2:
+                text = f"{vertex.ident % template.vertex_count}r"
+            elif vertex.ident < template.vertex_count * 3:
+                text = f"{vertex.ident % template.vertex_count}b"
+            elif vertex.ident < template.vertex_count * 4:
+                text = f"{vertex.ident % template.vertex_count}d"
+            return text
+
+        for face in template.faces:
+            v1 = get_vertex_ref_text(face.vertex[0])
+            v2 = get_vertex_ref_text(face.vertex[1])
+            v3 = get_vertex_ref_text(face.vertex[2])
+            f.write(f"{v1},{v2},{v3}\n")
+        f.close()
