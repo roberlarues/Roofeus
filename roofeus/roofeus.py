@@ -1,11 +1,7 @@
 from math import floor
-
-import roofeus.models
-from roofeus.utils import sub_vectors, add_vectors, mul_vector_by_scalar, size_vector, has_intersection
+from roofeus.utils import sub_vectors, add_vectors, mul_vector_by_scalar
 from roofeus.utils import calc_vector_lineal_combination_params, calculate_vertex_groups
 from roofeus.models import RFVertexData, RFProjected2dVertex
-
-# import matplotlib.pyplot as plt  # TODO quitar
 
 
 def create_2d_mesh(template, target):
@@ -86,20 +82,17 @@ def transform_to_3d_mesh(target, mesh_2d):
     return vertex_list, structure
 
 
-def build_faces(structure, template, target, vertex_list):
+def build_faces(structure, template, vertex_list):
     """
     Creates the faces
     :param structure: row[]: column[]; quad[]: vertex: int - inner mesh structure
     :param template: RFTemplate - template
-    :param target: RFTargetVertex[] - target face
     :param vertex_list: VertexData[] - created vertex
     :return: created faces
     """
-
-    # Part 1 - Create full template faces
     faces = []
     faces_index = []
-    faces_half = []
+    bounding_edge_list = []
     for row_index in range(0, len(structure)):
         row = structure[row_index]
         for quad_index in range(0, len(row)):
@@ -128,161 +121,19 @@ def build_faces(structure, template, target, vertex_list):
                             diag_quad = structure[row_index + 1][quad_index + 1]
                             face_vertex.append(diag_quad[vertex_idx % template.vertex_count])
 
-                if all([vertex_list[i].inside for i in face_vertex]):
+                if len(face_vertex) >= 3 and all([vertex_list[i].inside for i in face_vertex]):
                     faces.append(face_vertex)
                     faces_index.append(face_idx)
-                elif not all([not vertex_list[i].inside for i in face_vertex]):
-                    faces_half.append(face_vertex)
+                elif len(face_vertex) == 2 or not all([not vertex_list[i].inside for i in face_vertex]):
+                    vertex_inside = []
+                    for v in face_vertex:
+                        if vertex_list[v].inside:
+                            vertex_inside.append(v)
 
-    # Part 2 - Fill between unconnected vertex and target
+                    if len(vertex_inside) == 2:
+                        bounding_edge_list.append(tuple(vertex_inside))
 
-    # Part 2.1 - Fill in-out pairs
-    class InOut:
-        """A in-out vertex pair of an incomplete face"""
-        def __init__(self, i, o):
-            self.inside = i
-            self.outside = o
-            self.nearest_vertex = None
-
-    pairs_in_out = []
-    for half_face in faces_half:
-        face_inside = []
-        outside = None
-        for v in half_face:
-            if vertex_list[v].inside:
-                face_inside.append(v)
-            else:
-                outside = v
-
-        for inside in face_inside:
-            pairs_in_out.append(InOut(inside, outside))
-
-    # Part 2.2 - Find edges
-    class Edge:
-        """Edge of the target face"""
-        def __init__(self, v1, v2, index):
-            self.v1 = v1
-            self.v2 = v2
-            self.attached_in_outs = []
-            self.size = size_vector(sub_vectors(v2.uvs, v1.uvs))
-            self.index = index
-
-    edge_list = []
-    for i in range(0, len(target)):
-        edge_list.append(Edge(target[i], target[(i + 1) % len(target)], i))
-
-    # Part 2.3 - Calculate nearest edge of each pair
-    def calc_nearest_edge(edges, io_data):
-        """
-        Calculates the nearest edge of the in-out pair
-        :param edges: edge list
-        :param io_data: in out pair
-        :return: nearest edge
-        """
-        nearest = None
-        inside_point = vertex_list[io_data.inside].coords_2d
-        outside_point = vertex_list[io_data.outside].coords_2d
-        for e in edges:
-            if has_intersection((e.v1.uvs, e.v2.uvs), (inside_point, outside_point), 0.01):
-                nearest = e
-        return nearest
-
-    # Plot target for test purpose
-    # colors = ['ro-', 'go-', 'bo-', 'yo-']
-    # for i in range(0, len(target)):
-    #     plt.plot([target[i].uvs[0], target[(i + 1) % len(target)].uvs[0]],
-    #              [target[i].uvs[1], target[(i + 1) % len(target)].uvs[1]], 'yo-')
-
-    for in_out in pairs_in_out:
-        nearest_edge = calc_nearest_edge(edge_list, in_out)
-        # inside_p = vertex_list[in_out.inside].coords_2d
-        # outside_p = vertex_list[in_out.outside].coords_2d
-        if nearest_edge is None:
-            print('IO pair with no nearest edge')
-            # plt.plot([inside_p[0], outside_p[0]], [inside_p[1], outside_p[1]], 'yo-')
-            continue
-        # BEGIN PLOT
-        # plt.plot([inside_p[0], outside_p[0]], [inside_p[1], outside_p[1]], colors[nearest_edge.index])
-        # END PLOT
-        contains = False
-        for io in nearest_edge.attached_in_outs:
-            if io.inside == in_out.inside:
-                contains = True
-                break
-        if not contains:
-            nearest_edge.attached_in_outs.append(in_out)
-    # plt.show()
-
-    # Part 2.4 - Build pending faces
-    def build_pending_faces(v1, v2, pending_list):
-        """
-        Builds recursively faces from vertex v1, v2 and pending vertex list (only if they are visible
-        :param v1: RFTargetVertex|int - vertex 1
-        :param v2: RFTargetVertex|int - vertex 2
-        :param pending_list:  InOut[] - pending vertex list
-        :return: face list of
-        """
-        def is_visible(ref_coords, vertex, added_list):
-            """
-            Check if ref_coords are not occluded by added_list from vertex. In other words, checks if a imaginary ray
-            traced from ref_coords to vertex intersects with the path formed by every vertex of added_list
-            :param ref_coords: coords to check
-            :param vertex: coords from
-            :param added_list: already added vertex list
-            :return: true if is visible
-            """
-            visible = True
-            if len(added_list) > 1:
-                for i in range(0, len(added_list) - 1):
-                    if has_intersection((vertex_list[added_list[i]].coords_2d, vertex_list[added_list[i + 1]].coords_2d),
-                                        (ref_coords, vertex), -0.05):
-                        visible = False
-                        break
-            return visible
-
-        v1_coords = v1.uvs if type(v1) is roofeus.models.RFTargetVertex else vertex_list[v1].coords_2d
-        v1_index = v1.ident if type(v1) is roofeus.models.RFTargetVertex else v1
-        v2_index = v2.ident if type(v2) is roofeus.models.RFTargetVertex else v2
-        pending = []
-        added = []
-        last = None
-        v_count = 0
-        pending_faces = []
-        pending_face_idx = []
-        for v in pending_list:
-            v_count += 1
-            if is_visible(v1_coords, vertex_list[v.inside].coords_2d, added):
-                if len(pending) > 0:
-                    pf, pfi = build_pending_faces(last, v.inside, pending)
-                    pending_faces.extend(pf)
-                    pending_face_idx.extend(pfi)
-                    pending = []
-                if last is not None:
-                    pending_faces.append([last, v1_index, v.inside])
-                    pending_face_idx.append(0)  # No importa
-                if v_count == len(pending_list):
-                    pending_faces.append([v1_index, v2_index, v.inside])
-                    pending_face_idx.append(0)  # No importa
-                last = v.inside
-                added.append(v.inside)
-            else:
-                pending.append(v)
-
-        if len(pending) > 0:
-            pf, pfi = build_pending_faces(last, v2, pending)
-            pending_faces.extend(pf)
-            pending_face_idx.extend(pfi)
-            pending_faces.append([v1_index, v2_index, last])
-            pending_face_idx.append(0)  # No importa
-        return pending_faces, pending_face_idx
-
-    for edge in edge_list:
-        ordered_vertex_list = sorted(edge.attached_in_outs, key=lambda x: size_vector(sub_vectors(edge.v1.uvs,
-                                                                                                  vertex_list[x.inside].coords_2d)))
-        p_faces, p_face_idx = build_pending_faces(edge.v1, edge.v2, ordered_vertex_list)
-        faces.extend(p_faces)
-        faces_index.extend(p_face_idx)
-    return faces, faces_index
+    return faces, faces_index, bounding_edge_list
 
 
 def create_mesh(template, target):
@@ -298,5 +149,5 @@ def create_mesh(template, target):
     """
     mesh_2d = create_2d_mesh(template, target)
     vertex_list, structure = transform_to_3d_mesh(target, mesh_2d)
-    faces, _faces_idx = build_faces(structure, template, target, vertex_list)
-    return vertex_list, faces
+    faces, _faces_idx, bounding_edge_list = build_faces(structure, template, vertex_list)
+    return vertex_list, faces, bounding_edge_list

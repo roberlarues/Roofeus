@@ -7,9 +7,9 @@ import roofeus.models as rfsm
 from roofeus.utils import read_template
 
 
-##################################
-# Run this file to test roofeus! #
-##################################
+#################################
+# Run this file to test roofeus #
+#################################
 
 
 def prepare_target():
@@ -17,7 +17,7 @@ def prepare_target():
     Creates a example target face
     :return: list of RFTargetVertex
     """
-    size = 4
+    size = 1.8
     target = [
         rfsm.RFTargetVertex(0, 0, 0, -size, -size),
         rfsm.RFTargetVertex(0, 1, 1, -size, size),
@@ -100,14 +100,15 @@ def plot_faces(v_list, face_list, face_index, template, target):
 
     for i in range(0, len(face_list)):
         coll = Poly3DCollection([v_list[j].coords_3d if j >= 0 else target[-1-j].coords for j in face_list[i]])
-        coll.set_color(template.face_colors[face_index[i]])
+        coll.set_color(template.face_colors[face_index[i] % len(template.face_colors)])
         ax.add_collection3d(coll)
         coli = coli + 1
     plt.show()
 
 
 if __name__ == '__main__':
-    test_template = read_template('test_template.txt')
+    test_template = read_template('images/template.txt')
+    # test_template = read_template('test_template.txt')
     test_template.face_colors = [(1, 0, 0), (0, 1, 0), (0, 1, 0), (0, 0, 1), (1, 1, 0), (1, 1, 0)]
     # plot_template(test_template)
 
@@ -118,5 +119,5 @@ if __name__ == '__main__':
     # plot_mesh_2d(test_template, test_target, mesh_2d)
 
     vertex_list, structure = rfs.transform_to_3d_mesh(test_target, mesh_2d)
-    faces, faces_idx = rfs.build_faces(structure, test_template, test_target, vertex_list)
+    faces, faces_idx, _bounding_edges = rfs.build_faces(structure, test_template, vertex_list)
     plot_faces(vertex_list, faces, faces_idx, test_template, test_target)
