@@ -17,7 +17,7 @@ def sub_vectors(v1, v2):
     Subtracts v2 to v1
     :param v1: vector 1
     :param v2: vector 2
-    :return: v1 +-v2
+    :return: v1 - v2
     """
     return tuple([v1[i] - v2[i] for i in range(0, len(v1))])
 
@@ -208,9 +208,18 @@ def write_template(filename, template):
                 text = f"{vertex.ident % template.vertex_count}d"
             return text
 
+        def cross_product_possitive(v1, v2):
+            return v1[0] * v2[1] - v1[1] * v2[0] >= 0
+
         for face in template.faces:
-            v1 = get_vertex_ref_text(face.vertex[0])
-            v2 = get_vertex_ref_text(face.vertex[1])
-            v3 = get_vertex_ref_text(face.vertex[2])
-            f.write(f"{v1},{v2},{v3}\n")
+            v1_txt = get_vertex_ref_text(face.vertex[0])
+            v2_txt = get_vertex_ref_text(face.vertex[1])
+            v3_txt = get_vertex_ref_text(face.vertex[2])
+            v12 = sub_vectors(face.vertex[1].coords, face.vertex[0].coords)
+            v13 = sub_vectors(face.vertex[2].coords, face.vertex[0].coords)
+            if cross_product_possitive(v13, v12):
+                f.write(f"{v1_txt},{v2_txt},{v3_txt}\n")
+            else:
+                # Change order to flip normal
+                f.write(f"{v1_txt},{v3_txt},{v2_txt}\n")
         f.close()
