@@ -17,7 +17,7 @@ def prepare_target():
     Creates a example target face
     :return: list of RFTargetVertex
     """
-    size = 1.8
+    size = 0.5
     target = [
         rfsm.RFTargetVertex(0, 0, 0, -size, -size),
         rfsm.RFTargetVertex(0, 1, 1, -size, size),

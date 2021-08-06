@@ -20,7 +20,7 @@ def build_target_list(bm):
             for loop in face.loops:
                 coords = loop.vert.co
                 uv = loop[uv_layer].uv
-                target_vertex = rfsm.RFTargetVertex(coords[0], coords[1], coords[2], uv[0], uv[1])
+                target_vertex = rfsm.RFTargetVertex(coords[0], coords[1], coords[2], uv[0], 1 - uv[1])
                 target_vertex.bl_vertex = loop.vert
                 target.append(target_vertex)
 
@@ -60,7 +60,10 @@ def create_result_mesh(bm, vertex_list, faces, target, material_index, bounding_
             bl_face = bm.faces.new(face_vertex_list)
             bl_face.material_index = material_index
             for loop, i in zip(bl_face.loops, face):
-                loop[uv_layer].uv = vertex_list[i].coords_2d if i >= 0 else target[-1-i].uvs
+                if i >= 0:
+                    loop[uv_layer].uv = (vertex_list[i].coords_2d[0], 1 - vertex_list[i].coords_2d[1])
+                else:
+                    loop[uv_layer].uv = (target[-1-i].uvs[0], 1 - target[-1-i].uvs[1])
         else:
             print("WARN: Incomplete face. len:", len(face))
 
