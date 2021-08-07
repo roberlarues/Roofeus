@@ -20,6 +20,15 @@ class RoofeusPanel(bpy.types.Panel):
         row.prop(roofeus, "template_file")
 
         row = layout.row()
+        row.prop(roofeus, "fill_uncompleted")
+
+        row = layout.row()
+        row.prop(roofeus, "delete_original_vertex")
+
+        row = layout.row()
+        row.prop(roofeus, "delete_original_face")
+
+        row = layout.row()
         row.operator("mesh.roofeus")
 
 
