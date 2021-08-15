@@ -1,23 +1,57 @@
 # Roofeus
-Blender plugin to generate tiled geometry along a surface based on a template.
+Blender plugin to generate tiled geometry based on a template along a surface .
 
-## The problem
-I was modeling my village in Blender to put it into Unreal Engine and make a game.
-When I had to model the roofs, I decided to do it with displacement maps because i
-wanted them realistic but efficient (handling LODs in Unreal).
+![Roofeus result](images/Result.png?raw=true "Roofeus result")
 
-Displacement map requires some geometry in the surface to work well. Starting from
-a 4-corner plane model for the roof, I tried to make a grid subdivision, but the results
-with the displacement map were not satisfactory: some triangles not desired, lots of subdivisions
- to acceptable results...
+## Purpose
+If you want to apply displacement maps in a plane in blender, you'll need more vertices inside the plane.
+You can create them automatically with subdivisions:
+![Subdivision comparison](images/Subdivisioncomparison.png?raw=true "Subdivision comparison")
+The more subdivisions you make, the more better results you'll have, but it will be more heavy and more complex to render.
+And there are lot of useless geometry.
 
-After that, i decided to cut by-hand the plane, exactly where i needed. This results were far better,
-and using few inner polygons. The problem: it will be a pain made it manually for every roof of the village.
+You can create them manually, but in extensive surfaces with lot of details could be a pain...
 
-Roofeus borns as a solution to automatize this process.
+Roofeus offers another posibility for repetitive patterns:
+1) Define a template over the texture (composed by vertices and faces)
+2) Apply it in a blender face, adapting it to the face UVs
 
-## The solution
-TODO
+This solution allows to create subdivisions with the exact precision you will define in the template and very fast.
+![Roofeus result comparison](images/Resultcomparison.png?raw=true "Roofeus result comparison")
+On the left, plane subdivided by blender using Multiresolution tool and 7 simple subdivisions (>16k vertices). 
+On the right, roofeus result (916 vertices).
+
+## How to install
+To install roofeus add-on, compress the "roofeus" folder in a zip file and install it from the blender add-ons menu.
+You can find more information about install blender add-ons in https://docs.blender.org/manual/en/latest/editors/preferences/addons.html
+
+To run template_editor.py and main.py you will need python3 and the dependencies in requirements.txt
 
 ## How to use
-TODO
+Roofeus is intended to use in 2 steps: create the template and using it in blender.
+
+### Create a template
+To create and edit templates you can run the template_editor.py script to open the visual editor. It will allow you to:
+- Open a texture to draw vertices over it
+- Open an existing template
+- Save the template (txt extension, for the moment)
+- Create and edit vertices
+- Create and edit faces
+
+![Template editor](images/TemplateEditor.png?raw=true "Template editor")
+  
+In the "Face creation" tab, the texture and template is displayed in a 2x2 grid. That is because, when you apply it as a repetitive pattern in blender,
+you'll want to have the vertices of your template linked to the next 'projected' template. So, you can create faces between them.
+
+  
+### Use a template
+Select a face in the edit mode and open the "Roofeus" vertical tab. A panel with some options will be displayed:
+
+![Blender panel](images/BlenderPanel.png?raw=true "Blender panel")
+- Template: The created template to apply
+- Fill uncompleted space: fills the vertices that were linked to other vertices in the template that doesn't fit in the
+target face to the target vertices.
+- Delete original vertex: deletes the target vertices after apply roofeus.
+- Delete original face: deletes the target faces after apply roofeus.
+- Roofeus: does the magic.
+  
