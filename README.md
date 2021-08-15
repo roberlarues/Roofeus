@@ -6,7 +6,7 @@ Blender plugin to generate tiled geometry based on a template along a surface .
 ## Purpose
 If you want to apply displacement maps in a plane in blender, you'll need more vertices inside the plane.
 You can create them automatically with subdivisions:
-![Subdivision comparison](images/Subdivisioncomparison.png?raw=true "Subdivision comparison")
+![Subdivision comparison](images/SubdivisionComparison.png?raw=true "Subdivision comparison")
 The more subdivisions you make, the more better results you'll have, but it will be more heavy and more complex to render.
 And there are lot of useless geometry.
 
@@ -17,7 +17,7 @@ Roofeus offers another posibility for repetitive patterns:
 2) Apply it in a blender face, adapting it to the face UVs
 
 This solution allows to create subdivisions with the exact precision you will define in the template and very fast.
-![Roofeus result comparison](images/Resultcomparison.png?raw=true "Roofeus result comparison")
+![Roofeus result comparison](images/ResultComparison.png?raw=true "Roofeus result comparison")
 On the left, plane subdivided by blender using Multiresolution tool and 7 simple subdivisions (>16k vertices). 
 On the right, roofeus result (916 vertices).
 
