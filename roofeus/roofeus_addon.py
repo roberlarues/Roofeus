@@ -31,20 +31,19 @@ def build_target_list(bm):
     return target_list, affected_faces
 
 
-def create_result_mesh(bm, vertex_list, faces, target, material_index, bounding_edge_list, context):
+def create_result_mesh(bm, vertex_list, faces, target, bounding_edge_list, context):
     """
     Creates blender data from roofeus output
     :param bm: blender object
     :param vertex_list: roofeus output vertex
     :param faces: roofeus output faces
     :param target: target face
-    :param material_index: material index to assign to the new faces
     :param bounding_edge_list: bounding edges
+    :param context: context for properties
     """
 
     props = context.scene.roofeus
     roofeus_id_layer = bm.verts.layers.int.get("roofeus_id") or bm.verts.layers.int.new("roofeus_id")
-    uv_layer = bm.loops.layers.uv.verify()
 
     # Create vertex
     bvertex_list = []
@@ -62,19 +61,24 @@ def create_result_mesh(bm, vertex_list, faces, target, material_index, bounding_
     new_faces = []
     for face in faces:
         if len(face) >= 3:
+            for i in range(0, len(face) - 2):
+                if face[i] in face[i+1:]:
+                    print("ERROR. vertices duplicados:", face)
+
             face_vertex_list = []
             for i in face:
                 if i >= 0:
                     face_vertex_list.append(bvertex_list[i])
                 else:
                     face_vertex_list.append(target[-1-i].bl_vertex)
-            bl_face = bm.faces.new(face_vertex_list)
-            new_faces.append(bl_face)
+            # bl_face = bm.faces.new(face_vertex_list)
+            result = bmesh.ops.contextual_create(bm, geom=face_vertex_list)
+            new_faces.extend(result.get("faces"))
         else:
-            print("WARN: Incomplete face. len:", len(face))
+            # print("WARN: Incomplete face. len:", len(face))
+            pass
 
-    # fill uncompleted faces
-    if props.fill_uncompleted and not props.delete_original_vertex:
+    def select_bounding_edges():
         bpy.ops.mesh.select_mode(type='EDGE', action='ENABLE')
         bpy.ops.mesh.select_all(action='DESELECT')
         target_vertex = [t.bl_vertex for t in target]
@@ -84,10 +88,13 @@ def create_result_mesh(bm, vertex_list, faces, target, material_index, bounding_
                     edge.select = True
 
         for bounding_edge in bounding_edge_list:
-            edge_verts = [bvertex_list[v] for v in bounding_edge]
+            edge_verts = [bvertex_list[vert] for vert in bounding_edge]
             edge = bm.edges.get(edge_verts) or bm.edges.new(edge_verts)
             edge.select = True
 
+    # fill uncompleted faces
+    if props.fill_uncompleted and not props.delete_original_vertex:
+        select_bounding_edges()
         bpy.ops.mesh.fill()
 
     # Delete original vertex if specified
@@ -96,9 +103,18 @@ def create_result_mesh(bm, vertex_list, faces, target, material_index, bounding_
 
     # Select every new face
     bpy.ops.mesh.select_mode(type='FACE', action='ENABLE')
+    bpy.ops.mesh.select_all(action='DESELECT')
     for face in new_faces:
-        face.select = True
+        if face.is_valid:
+            face.select = True
 
+    # Recalculate normals
+    bpy.ops.mesh.normals_make_consistent(inside=False)
+
+
+def setup_uvs(bm, material_index, vertex_list, target):
+    roofeus_id_layer = bm.verts.layers.int.get("roofeus_id") or bm.verts.layers.int.new("roofeus_id")
+    uv_layer = bm.loops.layers.uv.verify()
     # Setup UVs
     for face in bm.faces:
         if face.select:
@@ -156,8 +172,9 @@ class Roofeus(bpy.types.Operator):
             if template:
                 for target, orig_face in zip(target_list, original_faces):
                     vertex_list, faces, bounding_edge_list = rfs.create_mesh(template, target)
-                    create_result_mesh(bm, vertex_list, faces, target, orig_face.material_index, bounding_edge_list,
-                                       context)
+                    create_result_mesh(bm, vertex_list, faces, target, bounding_edge_list, context)
+                    bmesh.update_edit_mesh(obj.data)
+                    setup_uvs(bm, orig_face.material_index, vertex_list, target)
 
                 bmesh.update_edit_mesh(obj.data)
                 if props.delete_original_face and not props.delete_original_vertex:

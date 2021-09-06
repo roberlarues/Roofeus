@@ -416,7 +416,7 @@ class TemplateEditor(QtWidgets.QMainWindow, Ui_MainWindow):
                     elif v_ident < self.last_valid_vertex_count * 4:
                         for v in self.template.visible_vertex():
                             if v.last_ident == v_ident % self.last_valid_vertex_count:
-                                new_face.append(self.template.get_vertex_diag_quad(v))
+                                new_face.append(self.template.get_vertex_diag_cell(v))
                                 break
                 if len(new_face) == 3:
                     face = rfsm.RFTemplateFace(new_face[0], new_face[1], new_face[2])
@@ -443,7 +443,7 @@ class TemplateEditor(QtWidgets.QMainWindow, Ui_MainWindow):
                 elif q == 2:
                     face_vertex.append(self.template.get_vertex_bottom(v))
                 elif q == 3:
-                    face_vertex.append(self.template.get_vertex_diag_quad(v))
+                    face_vertex.append(self.template.get_vertex_diag_cell(v))
                 else:
                     print("WARN: QUAD ", q)
         return face_vertex

@@ -5,7 +5,7 @@ from importlib import util
 bl_info = {
     "name": "Roofeus",
     "blender": (2, 80, 0),
-    'version': (0, 1, 0),
+    'version': (1, 1, 0),
     "category": "Mesh",
 }
 

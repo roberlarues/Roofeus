@@ -54,7 +54,7 @@ def calc_intersection(r1, r2):
         return tuple([tmp_x / denom, tmp_y / denom])
 
 
-def has_intersection(r1, r2, threshold=0.01):
+def has_intersection(r1, r2, threshold=0.001):
     """
     Checks if 2 segments of different rects intersects
     :param r1: segment 1
@@ -122,6 +122,22 @@ def calculate_vertex_groups(target):
     return Polygon([v.uvs for v in target])
 
 
+def check_positive_normal(v1, v2, v3):
+    """
+    Checks if the given order makes the normal positive
+    :param v1: vertex 1
+    :param v2: vertex 2
+    :param v3: vertex 3
+    """
+
+    def cross_product_positive(a, b):
+        return a[0] * b[1] - a[1] * b[0] >= 0
+
+    v12 = sub_vectors(v2, v1)
+    v13 = sub_vectors(v3, v1)
+    return cross_product_positive(v13, v12)
+
+
 class Polygon:
     """2D Polygon"""
 
@@ -177,7 +193,7 @@ def read_template(filename):
                     elif 'b' in f_el:
                         v_idx.append(template.get_vertex_bottom(template.vertex[int(f_el.strip('b'))]))
                     elif 'd' in f_el:
-                        v_idx.append(template.get_vertex_diag_quad(template.vertex[int(f_el.strip('d'))]))
+                        v_idx.append(template.get_vertex_diag_cell(template.vertex[int(f_el.strip('d'))]))
                     else:
                         v_idx.append(template.vertex[int(f_el)])
                 f = rfsm.RFTemplateFace(v_idx[0], v_idx[1], v_idx[2])
@@ -208,16 +224,11 @@ def write_template(filename, template):
                 text = f"{vertex.ident % template.vertex_count}d"
             return text
 
-        def cross_product_possitive(v1, v2):
-            return v1[0] * v2[1] - v1[1] * v2[0] >= 0
-
         for face in template.faces:
             v1_txt = get_vertex_ref_text(face.vertex[0])
             v2_txt = get_vertex_ref_text(face.vertex[1])
             v3_txt = get_vertex_ref_text(face.vertex[2])
-            v12 = sub_vectors(face.vertex[1].coords, face.vertex[0].coords)
-            v13 = sub_vectors(face.vertex[2].coords, face.vertex[0].coords)
-            if cross_product_possitive(v13, v12):
+            if check_positive_normal(face.vertex[0].coords, face.vertex[1].coords, face.vertex[2].coords):
                 f.write(f"{v1_txt},{v2_txt},{v3_txt}\n")
             else:
                 # Change order to flip normal

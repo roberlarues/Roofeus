@@ -59,7 +59,7 @@ class RFTemplate:
     def get_vertex_bottom(self, v):
         return self.vertex[v.ident + self.vertex_count * 2]
 
-    def get_vertex_diag_quad(self, v):
+    def get_vertex_diag_cell(self, v):
         return self.vertex[v.ident + self.vertex_count * 3]
 
     def visible_vertex(self):
