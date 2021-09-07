@@ -1,4 +1,5 @@
 import sys
+import argparse
 from PyQt5 import uic
 from PyQt5.QtCore import QPoint
 from PyQt5.QtGui import QPen, QPolygon, QBrush, QColor
@@ -84,8 +85,9 @@ class TemplateEditor(QtWidgets.QMainWindow, Ui_MainWindow):
         self.display_repeated_faces_w.stateChanged.connect(self.change_repeated)
 
     # Menu actions
-    def open_template(self):
-        template_file = QtWidgets.QFileDialog.getOpenFileName(self, "Open template")
+    def open_template(self, template_file=None):
+        if not template_file:
+            template_file = QtWidgets.QFileDialog.getOpenFileName(self, "Open template")
         if template_file is not None and len(template_file[0]) > 0:
             self.template = rfsu.read_template(template_file[0])
             self.unselect_all_vertex()
@@ -101,8 +103,9 @@ class TemplateEditor(QtWidgets.QMainWindow, Ui_MainWindow):
         template_file = QtWidgets.QFileDialog.getSaveFileName(self, "Save template")
         rfsu.write_template(template_file[0], self.template)
 
-    def open_texture(self):
-        texture_file = QtWidgets.QFileDialog.getOpenFileName(self, "Select texture")
+    def open_texture(self, texture_file=None):
+        if not texture_file:
+            texture_file = QtWidgets.QFileDialog.getOpenFileName(self, "Select texture")
         if texture_file is not None and len(texture_file[0]) > 0:
             self.image_viewer.load_image(texture_file[0])
             self.image_viewer_faces.load_image(texture_file[0])
@@ -450,6 +453,18 @@ class TemplateEditor(QtWidgets.QMainWindow, Ui_MainWindow):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='A test program.')
+    parser.add_argument("-t", "--template_file", help="Existing template file")
+    parser.add_argument("-i", "--image_file", help="Existing image file")
+    args = parser.parse_args()
+
     app = QtWidgets.QApplication(sys.argv)
-    window = TemplateEditor()
+    editor = TemplateEditor()
+
+    if args.image_file:
+        editor.open_texture([args.image_file])
+
+    if args.template_file:
+        editor.open_template([args.template_file])
+
     app.exec_()
