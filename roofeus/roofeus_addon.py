@@ -93,13 +93,9 @@ def create_result_mesh(bm, vertex_list, faces, target, bounding_edge_list, conte
             edge.select = True
 
     # fill uncompleted faces
-    if props.fill_uncompleted and not props.delete_original_vertex:
+    if str(props.fill_uncompleted) == 'vertex':
         select_bounding_edges()
         bpy.ops.mesh.fill()
-
-    # Delete original vertex if specified
-    if props.delete_original_vertex:
-        bmesh.ops.delete(bm, geom=[target_vertex.bl_vertex for target_vertex in target], context='VERTS')
 
     # Select every new face
     bpy.ops.mesh.select_mode(type='FACE', action='ENABLE')
@@ -141,15 +137,16 @@ class RoofeusProperties(bpy.types.PropertyGroup):
                                             description="Template file to populate inside target face",
                                             subtype="FILE_PATH",
                                             update=on_template_file_updated)
-    fill_uncompleted: bpy.props.BoolProperty(name="Fill uncompleted space",
-                                             description="Fills the space between the target and generated faces",
-                                             default=True)
-    delete_original_vertex: bpy.props.BoolProperty(name="Delete original vertex",
-                                                   description="Deletes the target vertex after processing",
-                                                   default=False)
-    delete_original_face: bpy.props.BoolProperty(name="Delete original face",
-                                                 description="Deletes the target face after processing",
-                                                 default=True)
+    fill_uncompleted_items = [
+        ('border', 'Fill to border', 'Fills the faces like if they were cutted by the border'),
+        ('vertex', 'Fill to vertices', 'Fills the faces to the original vertices'),
+        ('none', 'No fill', 'Keeps the space empty'),
+    ]
+    fill_uncompleted: bpy.props.EnumProperty(name="Fill uncompleted space",
+                                             description="Fills the space that template faces are not completely inside"
+                                                         " the target",
+                                             items=fill_uncompleted_items,
+                                             default='border')
 
 
 class Roofeus(bpy.types.Operator):
@@ -158,27 +155,31 @@ class Roofeus(bpy.types.Operator):
     bl_label = "Roofeus"
     bl_options = {'REGISTER', 'UNDO'}
 
+    @classmethod
+    def poll(cls, context):
+        props = context.scene.roofeus
+        return str(bpy.path.abspath(props.template_file))
+
     def execute(self, context):
         print("Begin")
         obj = context.object
         me = obj.data
         bm = bmesh.from_edit_mesh(me)
-        target_list, original_faces = build_target_list(bm)
 
         props = context.scene.roofeus
         template_file = str(bpy.path.abspath(props.template_file))
         if template_file:
+            target_list, original_faces = build_target_list(bm)
             template = rfsu.read_template(template_file)
             if template:
                 for target, orig_face in zip(target_list, original_faces):
-                    vertex_list, faces, bounding_edge_list = rfs.create_mesh(template, target)
+                    vertex_list, faces, bounding_edge_list = rfs.create_mesh(template, target, props.fill_uncompleted)
                     create_result_mesh(bm, vertex_list, faces, target, bounding_edge_list, context)
                     bmesh.update_edit_mesh(obj.data)
                     setup_uvs(bm, orig_face.material_index, vertex_list, target)
 
                 bmesh.update_edit_mesh(obj.data)
-                if props.delete_original_face and not props.delete_original_vertex:
-                    bmesh.ops.delete(bm, geom=original_faces, context='FACES_ONLY')
+                bmesh.ops.delete(bm, geom=original_faces, context='FACES_ONLY')
                 print("Done")
             else:
                 print("Template not valid")

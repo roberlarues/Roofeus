@@ -137,7 +137,7 @@ def build_border_vertices(target, vertex_list, face_vertex, border_vertex, borde
     for fi in range(0, len(face_vertex)):
         v1 = face_vertex[fi]
         for v2 in face_vertex[fi+1:]:
-            for i in range(0, len(target)):  # TODO asume orden de ciclo para los face vertices
+            for i in range(0, len(target)):
                 r1 = (vertex_list[v1].coords_2d, vertex_list[v2].coords_2d)
                 r2 = (target[i].uvs, target[(i + 1) % len(target)].uvs)
                 if has_intersection(r1, r2, 0):
@@ -182,13 +182,14 @@ def build_borders(target, vertex_list, faces, faces_index, face_idx, face_vertex
     return border_vertex, border_vertex_index
 
 
-def build_faces(structure, template, vertex_list, target):
+def build_faces(structure, template, vertex_list, target, fill_uncompleted='border'):
     """
     Creates the faces
     :param structure: row[]: column[]; cell[]: vertex: int - inner mesh structure
     :param template: RFTemplate - template
     :param vertex_list: VertexData[] - created vertex
     :param target: RFTargetVertex[] - target face
+    :param fill_uncompleted: Fills the space that template faces are not completely inside the target
     :return: created faces
     """
     faces = []
@@ -206,16 +207,15 @@ def build_faces(structure, template, vertex_list, target):
                 if len(face_vertex) != 3:  # Shouldn't happen, the projected vertex covers all the target
                     continue
 
-                build_border = True  # TODO -> property
                 if all([vertex_list[i].inside for i in face_vertex]):
                     # All faces are inside the target
                     faces.append(face_vertex)
                     faces_index.append(face_idx)
-                elif build_border:
+                elif str(fill_uncompleted) == 'border':
                     border_vertex, border_vertex_index = build_borders(target, vertex_list, faces,
                                                                        faces_index, face_idx, face_vertex,
                                                                        border_vertex, border_vertex_index)
-                else:
+                elif str(fill_uncompleted) == 'vertex':
                     if not all([not vertex_list[i].inside for i in face_vertex]):
                         inside = list(filter(lambda fvertex: vertex_list[fvertex].inside, face_vertex))
                         if len(inside) == 2:
@@ -223,11 +223,12 @@ def build_faces(structure, template, vertex_list, target):
     return faces, faces_index, bounding_edge_list, border_vertex
 
 
-def create_mesh(template, target):
+def create_mesh(template, target, fill_uncompleted):
     """
     Fills the target with the pattern defined in template
     :param template: RFTemplate - template
     :param target: RFTargetVertex[] - target face
+    :param fill_uncompleted: Fills the space that template faces are not completely inside the target
     :return:
         vertex_list:  - Vertex list to create
         faces:  - Face list to create
@@ -236,6 +237,7 @@ def create_mesh(template, target):
     """
     mesh_2d = create_2d_mesh(template, target)
     vertex_list, structure = transform_to_3d_mesh(target, mesh_2d)
-    faces, _faces_idx, bounding_edge_list, border_vertex = build_faces(structure, template, vertex_list, target)
+    faces, _faces_idx, bounding_edge_list, border_vertex = build_faces(structure, template, vertex_list, target,
+                                                                       fill_uncompleted)
     vertex_list.extend(border_vertex)
     return vertex_list, faces, bounding_edge_list
