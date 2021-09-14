@@ -10,6 +10,10 @@ class RFTargetVertex:
         self.coords = (x, y, z)  # (float, float, float)
         self.uvs = (u, v)  # (float, float)
 
+    @classmethod
+    def reset_index(cls):
+        cls.id_neg = -1
+
 
 class RFTemplate:
     """

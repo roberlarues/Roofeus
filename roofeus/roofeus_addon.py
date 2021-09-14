@@ -18,6 +18,7 @@ def build_target_list(bm):
     for face in bm.faces:
         if face.select:
             target = []
+            rfsm.RFTargetVertex.reset_index()
             for loop in face.loops:
                 coords = loop.vert.co
                 uv = loop[uv_layer].uv
