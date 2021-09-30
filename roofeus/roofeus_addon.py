@@ -18,6 +18,7 @@ def build_target_list(bm):
     for face in bm.faces:
         if face.select:
             target = []
+            rfsm.RFTargetVertex.reset_index()
             for loop in face.loops:
                 coords = loop.vert.co
                 uv = loop[uv_layer].uv
@@ -31,20 +32,19 @@ def build_target_list(bm):
     return target_list, affected_faces
 
 
-def create_result_mesh(bm, vertex_list, faces, target, material_index, bounding_edge_list, context):
+def create_result_mesh(bm, vertex_list, faces, target, bounding_edge_list, context):
     """
     Creates blender data from roofeus output
     :param bm: blender object
     :param vertex_list: roofeus output vertex
     :param faces: roofeus output faces
     :param target: target face
-    :param material_index: material index to assign to the new faces
     :param bounding_edge_list: bounding edges
+    :param context: context for properties
     """
 
     props = context.scene.roofeus
     roofeus_id_layer = bm.verts.layers.int.get("roofeus_id") or bm.verts.layers.int.new("roofeus_id")
-    uv_layer = bm.loops.layers.uv.verify()
 
     # Create vertex
     bvertex_list = []
@@ -62,19 +62,24 @@ def create_result_mesh(bm, vertex_list, faces, target, material_index, bounding_
     new_faces = []
     for face in faces:
         if len(face) >= 3:
+            for i in range(0, len(face) - 2):
+                if face[i] in face[i+1:]:
+                    print("ERROR. vertices duplicados:", face)
+
             face_vertex_list = []
             for i in face:
                 if i >= 0:
                     face_vertex_list.append(bvertex_list[i])
                 else:
                     face_vertex_list.append(target[-1-i].bl_vertex)
-            bl_face = bm.faces.new(face_vertex_list)
-            new_faces.append(bl_face)
+            # bl_face = bm.faces.new(face_vertex_list)
+            result = bmesh.ops.contextual_create(bm, geom=face_vertex_list)
+            new_faces.extend(result.get("faces"))
         else:
-            print("WARN: Incomplete face. len:", len(face))
+            # print("WARN: Incomplete face. len:", len(face))
+            pass
 
-    # fill uncompleted faces
-    if props.fill_uncompleted and not props.delete_original_vertex:
+    def select_bounding_edges():
         bpy.ops.mesh.select_mode(type='EDGE', action='ENABLE')
         bpy.ops.mesh.select_all(action='DESELECT')
         target_vertex = [t.bl_vertex for t in target]
@@ -84,21 +89,29 @@ def create_result_mesh(bm, vertex_list, faces, target, material_index, bounding_
                     edge.select = True
 
         for bounding_edge in bounding_edge_list:
-            edge_verts = [bvertex_list[v] for v in bounding_edge]
+            edge_verts = [bvertex_list[vert] for vert in bounding_edge]
             edge = bm.edges.get(edge_verts) or bm.edges.new(edge_verts)
             edge.select = True
 
+    # fill uncompleted faces
+    if str(props.fill_uncompleted) == 'vertex':
+        select_bounding_edges()
         bpy.ops.mesh.fill()
-
-    # Delete original vertex if specified
-    if props.delete_original_vertex:
-        bmesh.ops.delete(bm, geom=[target_vertex.bl_vertex for target_vertex in target], context='VERTS')
 
     # Select every new face
     bpy.ops.mesh.select_mode(type='FACE', action='ENABLE')
+    bpy.ops.mesh.select_all(action='DESELECT')
     for face in new_faces:
-        face.select = True
+        if face.is_valid:
+            face.select = True
 
+    # Recalculate normals
+    bpy.ops.mesh.normals_make_consistent(inside=False)
+
+
+def setup_uvs(bm, material_index, vertex_list, target):
+    roofeus_id_layer = bm.verts.layers.int.get("roofeus_id") or bm.verts.layers.int.new("roofeus_id")
+    uv_layer = bm.loops.layers.uv.verify()
     # Setup UVs
     for face in bm.faces:
         if face.select:
@@ -125,15 +138,16 @@ class RoofeusProperties(bpy.types.PropertyGroup):
                                             description="Template file to populate inside target face",
                                             subtype="FILE_PATH",
                                             update=on_template_file_updated)
-    fill_uncompleted: bpy.props.BoolProperty(name="Fill uncompleted space",
-                                             description="Fills the space between the target and generated faces",
-                                             default=True)
-    delete_original_vertex: bpy.props.BoolProperty(name="Delete original vertex",
-                                                   description="Deletes the target vertex after processing",
-                                                   default=False)
-    delete_original_face: bpy.props.BoolProperty(name="Delete original face",
-                                                 description="Deletes the target face after processing",
-                                                 default=True)
+    fill_uncompleted_items = [
+        ('border', 'Fill to border', 'Fills the faces like if they were cutted by the border'),
+        ('vertex', 'Fill to vertices', 'Fills the faces to the original vertices'),
+        ('none', 'No fill', 'Keeps the space empty'),
+    ]
+    fill_uncompleted: bpy.props.EnumProperty(name="Fill uncompleted space",
+                                             description="Fills the space that template faces are not completely inside"
+                                                         " the target",
+                                             items=fill_uncompleted_items,
+                                             default='border')
 
 
 class Roofeus(bpy.types.Operator):
@@ -142,26 +156,31 @@ class Roofeus(bpy.types.Operator):
     bl_label = "Roofeus"
     bl_options = {'REGISTER', 'UNDO'}
 
+    @classmethod
+    def poll(cls, context):
+        props = context.scene.roofeus
+        return str(bpy.path.abspath(props.template_file))
+
     def execute(self, context):
         print("Begin")
         obj = context.object
         me = obj.data
         bm = bmesh.from_edit_mesh(me)
-        target_list, original_faces = build_target_list(bm)
 
         props = context.scene.roofeus
         template_file = str(bpy.path.abspath(props.template_file))
         if template_file:
+            target_list, original_faces = build_target_list(bm)
             template = rfsu.read_template(template_file)
             if template:
                 for target, orig_face in zip(target_list, original_faces):
-                    vertex_list, faces, bounding_edge_list = rfs.create_mesh(template, target)
-                    create_result_mesh(bm, vertex_list, faces, target, orig_face.material_index, bounding_edge_list,
-                                       context)
+                    vertex_list, faces, bounding_edge_list = rfs.create_mesh(template, target, props.fill_uncompleted)
+                    create_result_mesh(bm, vertex_list, faces, target, bounding_edge_list, context)
+                    bmesh.update_edit_mesh(obj.data)
+                    setup_uvs(bm, orig_face.material_index, vertex_list, target)
 
                 bmesh.update_edit_mesh(obj.data)
-                if props.delete_original_face and not props.delete_original_vertex:
-                    bmesh.ops.delete(bm, geom=original_faces, context='FACES_ONLY')
+                bmesh.ops.delete(bm, geom=original_faces, context='FACES_ONLY')
                 print("Done")
             else:
                 print("Template not valid")

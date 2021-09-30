@@ -1,4 +1,5 @@
 import sys
+import argparse
 from PyQt5 import uic
 from PyQt5.QtCore import QPoint
 from PyQt5.QtGui import QPen, QPolygon, QBrush, QColor
@@ -84,8 +85,9 @@ class TemplateEditor(QtWidgets.QMainWindow, Ui_MainWindow):
         self.display_repeated_faces_w.stateChanged.connect(self.change_repeated)
 
     # Menu actions
-    def open_template(self):
-        template_file = QtWidgets.QFileDialog.getOpenFileName(self, "Open template")
+    def open_template(self, template_file=None):
+        if not template_file:
+            template_file = QtWidgets.QFileDialog.getOpenFileName(self, "Open template")
         if template_file is not None and len(template_file[0]) > 0:
             self.template = rfsu.read_template(template_file[0])
             self.unselect_all_vertex()
@@ -101,8 +103,9 @@ class TemplateEditor(QtWidgets.QMainWindow, Ui_MainWindow):
         template_file = QtWidgets.QFileDialog.getSaveFileName(self, "Save template")
         rfsu.write_template(template_file[0], self.template)
 
-    def open_texture(self):
-        texture_file = QtWidgets.QFileDialog.getOpenFileName(self, "Select texture")
+    def open_texture(self, texture_file=None):
+        if not texture_file:
+            texture_file = QtWidgets.QFileDialog.getOpenFileName(self, "Select texture")
         if texture_file is not None and len(texture_file[0]) > 0:
             self.image_viewer.load_image(texture_file[0])
             self.image_viewer_faces.load_image(texture_file[0])
@@ -172,7 +175,8 @@ class TemplateEditor(QtWidgets.QMainWindow, Ui_MainWindow):
         self.unselect_all_faces()
         for f in self.template.faces:
             polygon = rfsu.Polygon([v.coords for v in f.vertex])
-            if polygon.contains((x, y)):
+            inside, _dc = polygon.contains((x, y))
+            if inside:
                 self.select_face(f)
                 f.selected = True
                 break
@@ -416,7 +420,7 @@ class TemplateEditor(QtWidgets.QMainWindow, Ui_MainWindow):
                     elif v_ident < self.last_valid_vertex_count * 4:
                         for v in self.template.visible_vertex():
                             if v.last_ident == v_ident % self.last_valid_vertex_count:
-                                new_face.append(self.template.get_vertex_diag_quad(v))
+                                new_face.append(self.template.get_vertex_diag_cell(v))
                                 break
                 if len(new_face) == 3:
                     face = rfsm.RFTemplateFace(new_face[0], new_face[1], new_face[2])
@@ -443,13 +447,25 @@ class TemplateEditor(QtWidgets.QMainWindow, Ui_MainWindow):
                 elif q == 2:
                     face_vertex.append(self.template.get_vertex_bottom(v))
                 elif q == 3:
-                    face_vertex.append(self.template.get_vertex_diag_quad(v))
+                    face_vertex.append(self.template.get_vertex_diag_cell(v))
                 else:
                     print("WARN: QUAD ", q)
         return face_vertex
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='A test program.')
+    parser.add_argument("-t", "--template_file", help="Existing template file")
+    parser.add_argument("-i", "--image_file", help="Existing image file")
+    args = parser.parse_args()
+
     app = QtWidgets.QApplication(sys.argv)
-    window = TemplateEditor()
+    editor = TemplateEditor()
+
+    if args.image_file:
+        editor.open_texture([args.image_file])
+
+    if args.template_file:
+        editor.open_template([args.template_file])
+
     app.exec_()

@@ -10,6 +10,10 @@ class RFTargetVertex:
         self.coords = (x, y, z)  # (float, float, float)
         self.uvs = (u, v)  # (float, float)
 
+    @classmethod
+    def reset_index(cls):
+        cls.id_neg = -1
+
 
 class RFTemplate:
     """
@@ -59,7 +63,7 @@ class RFTemplate:
     def get_vertex_bottom(self, v):
         return self.vertex[v.ident + self.vertex_count * 2]
 
-    def get_vertex_diag_quad(self, v):
+    def get_vertex_diag_cell(self, v):
         return self.vertex[v.ident + self.vertex_count * 3]
 
     def visible_vertex(self):
@@ -90,6 +94,7 @@ class RFProjected2dVertex:
     def __init__(self, x, y):
         self.coords = (x, y)  # (float, float)
         self.inside = False  # boolean
+        self.container_triangle_index = 0  # int
 
 
 class RFVertexData:
