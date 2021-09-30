@@ -7,19 +7,19 @@ Blender plugin to generate tiled geometry based on a template along a surface .
 If you want to apply displacement maps in a plane in blender, you'll need more vertices inside the plane.
 You can create them automatically with subdivisions:
 ![Subdivision comparison](images/SubdivisionComparison.png?raw=true "Subdivision comparison")
-The more subdivisions you make, the more better results you'll have, but it will be more heavy and more complex to render.
-And there are lot of useless geometry.
+The more subdivisions you make, the better results you'll have, but it will be more heavy and more complex to render.
+And there are lots of useless geometry.
 
-You can create them manually, but in extensive surfaces with lot of details could be a pain...
+You can create them manually, but in extensive surfaces with lots of details could be a pain...
 
-Roofeus offers another posibility for repetitive patterns:
+Roofeus offers another possibility for repetitive patterns:
 1) Define a template over the texture (composed by vertices and faces)
 2) Apply it in a blender face, adapting it to the face UVs
 
 This solution allows to create subdivisions with the exact precision you will define in the template and very fast.
 ![Roofeus result comparison](images/ResultComparison.png?raw=true "Roofeus result comparison")
 On the left, plane subdivided by blender using Multiresolution tool and 7 simple subdivisions (>16k vertices). 
-On the right, roofeus result (916 vertices).
+On the right, roofeus result (1318 vertices).
 
 ## How to install
 To install roofeus add-on, compress the "roofeus" folder in a zip file and install it from the blender add-ons menu.
@@ -49,9 +49,11 @@ Select a face in the edit mode and open the "Roofeus" vertical tab. A panel with
 
 ![Blender panel](images/BlenderPanel.png?raw=true "Blender panel")
 - Template: The created template to apply
-- Fill uncompleted space: fills the vertices that were linked to other vertices in the template that doesn't fit in the
-target face to the target vertices.
-- Delete original vertex: deletes the target vertices after apply roofeus.
-- Delete original face: deletes the target faces after apply roofeus.
-- Roofeus: does the magic.
+- Fill uncompleted space: Options to fill the space between the vertices that were linked to other vertices in the template that doesn't fit in the
+target face. Available options are:
+    - Fill to vertices: faces will be created until the target vertices.
+    - Fill to border: faces will be created as if they were cut by the target edge. This is the most accurate option,
+      but it creates more additional vertices along the edges.
+    - No fill: no faces will be created.
+- Roofeus: begin process.
   
