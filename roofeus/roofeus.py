@@ -1,6 +1,7 @@
 from math import floor
 from roofeus.utils import sub_vectors, add_vectors, mul_vector_by_scalar, has_intersection, calc_intersection, Polygon
-from roofeus.utils import calc_vector_lineal_combination_params, check_positive_normal, calculate_vertex_groups, size_vector
+from roofeus.utils import calc_vector_lineal_combination_params, calculate_vertex_groups
+from roofeus.utils import size_vector, get_polygon_subtriangle_for_index
 from roofeus.models import RFVertexData, RFProjected2dVertex
 
 
@@ -33,8 +34,10 @@ def create_2d_mesh(template, target):
     for row in projected_mesh:
         for col in row:
             for v in range(0, len(col)):
-                if polygon.contains(col[v].coords):
+                inside, inside_triangle = polygon.contains(col[v].coords)
+                if inside:
                     col[v].inside = True
+                    col[v].container_triangle_index = inside_triangle
     return projected_mesh
 
 
@@ -77,20 +80,14 @@ def transform_to_3d_mesh(target, mesh_2d):
             for v in cell:
                 vertex = get_nearest_target_vertex(target, v.coords, 0.001)
                 if not vertex or vertex in vertex_list:
-                    vertex = RFVertexData(vertex_index, v.coords, transform_vertex(target, v.coords), v.inside)
+                    wrapper_triangle_vertices = get_polygon_subtriangle_for_index(target, v.container_triangle_index)
+                    vertex = RFVertexData(vertex_index, v.coords, transform_vertex(wrapper_triangle_vertices, v.coords), v.inside)
                     vertex_list.append(vertex)
                     vertex_index += 1
                 structure_cell.append(vertex.index)
             structure_row.append(structure_cell)
         structure.append(structure_row)
     return vertex_list, structure
-
-
-def ensure_good_normal_order(v1, v2, v3):  # TODO borrar
-    if check_positive_normal(v1.coords_2d, v2.coords_2d, v3.coords_2d):
-        return [v1.index, v2.index, v3.index]
-    else:
-        return [v1.index, v3.index, v2.index]
 
 
 def get_nearest_target_vertex(target, intersection, threshold=0.005):
@@ -101,7 +98,7 @@ def get_nearest_target_vertex(target, intersection, threshold=0.005):
             target_vertex = tv
             break
     if target_vertex:
-        vertex = RFVertexData(target_vertex.ident, intersection, transform_vertex(target, intersection), True)
+        vertex = RFVertexData(target_vertex.ident, intersection, target_vertex.coords, True)
     return vertex
 
 
@@ -151,9 +148,13 @@ def build_border_vertices(target, vertex_list, face_vertex, border_vertex, borde
                         vertex = get_nearest_target_vertex(target, intersection)
 
                         if not vertex or vertex.index in face_border_vertex:
-                            # TODO asume target triangulo
+                            wrapper_triangle_vertices = [
+                                target[0 if 0 < i < len(target) - 1 else (i + 2) % len(target)],
+                                target[i],
+                                target[(i + 1) % len(target)]
+                            ]
                             vertex = RFVertexData(border_vertex_index, intersection,
-                                                  transform_vertex(target, intersection), True)
+                                                  transform_vertex(wrapper_triangle_vertices, intersection), True)
                             border_vertex_index += 1
                             border_vertex.append(vertex)
                         vertex.ov = v2
@@ -169,7 +170,8 @@ def build_borders(target, vertex_list, faces, faces_index, face_idx, face_vertex
 
     face_polygon = Polygon([vertex_list[v].coords_2d for v in face_vertex])
     for vt in target:
-        if face_polygon.contains(vt.uvs) and vt.ident not in face_border_vertex:
+        inside, _inside_triangle = face_polygon.contains(vt.uvs)
+        if inside and vt.ident not in face_border_vertex:
             face_border_vertex.append(vt.ident)
 
     for fv in face_vertex:

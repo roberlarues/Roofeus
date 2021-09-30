@@ -175,7 +175,8 @@ class TemplateEditor(QtWidgets.QMainWindow, Ui_MainWindow):
         self.unselect_all_faces()
         for f in self.template.faces:
             polygon = rfsu.Polygon([v.coords for v in f.vertex])
-            if polygon.contains((x, y)):
+            inside, _dc = polygon.contains((x, y))
+            if inside:
                 self.select_face(f)
                 f.selected = True
                 break

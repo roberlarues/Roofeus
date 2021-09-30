@@ -138,30 +138,56 @@ def check_positive_normal(v1, v2, v3):
     return cross_product_positive(v13, v12)
 
 
+def get_polygon_subtriangle_for_index(vlist, index):
+    return [vlist[0], vlist[index + 1], vlist[index + 2]]
+
+
 class Polygon:
-    """2D Polygon"""
+    """
+    2D convex Polygon
+    For >3 vertices, vertex_list must be in cycle order
+    """
 
     def __init__(self, vertex_list):
         self.vertex_list = vertex_list
+        self.sub_polygons = []
+        if len(self.vertex_list) > 3:
+            for i in range(0, len(self.vertex_list) - 2):
+                self.sub_polygons.append(Polygon(get_polygon_subtriangle_for_index(self.vertex_list, i)))
 
     def contains(self, vertex):
         """
         Checks if the vertex is inside the polygon
         :param vertex: vertex
-        :return: true if the vertex is inside
+        :return:
+         - true if the vertex is inside
+         - triangle vertex that contains the vertex. None if outside
         """
         found = True
-        for i in range(0, len(self.vertex_list)):
-            v = self.vertex_list[i]
-            va = self.vertex_list[(i + 1) % len(self.vertex_list)]  # Next
-            vb = self.vertex_list[(i + len(self.vertex_list) - 1) % len(self.vertex_list)]  # Previous
-            a_v = sub_vectors(va, v)
-            b_v = sub_vectors(vb, v)
-            v_v = sub_vectors(vertex, v)
-            a, b = calc_vector_lineal_combination_params(a_v, b_v, v_v)
-            if not (0 <= a <= 1 and b >= -0.01):
-                found = False
-        return found
+        container_triangle_index = 0
+        if len(self.vertex_list) == 3:
+            for i in range(0, len(self.vertex_list)):
+                v = self.vertex_list[i]
+                va = self.vertex_list[(i + 1) % len(self.vertex_list)]  # Next
+                vb = self.vertex_list[(i + len(self.vertex_list) - 1) % len(self.vertex_list)]  # Previous
+                a_v = sub_vectors(va, v)
+                b_v = sub_vectors(vb, v)
+                v_v = sub_vectors(vertex, v)
+                a, b = calc_vector_lineal_combination_params(a_v, b_v, v_v)
+                if not (0 <= a <= 1 and b >= -0.01):
+                    found = False
+                    break
+        else:
+            found = False
+            for pol in self.sub_polygons:
+                inside, _inside_triangle = pol.contains(vertex)
+                if inside:
+                    found = True
+                    break
+                else:
+                    container_triangle_index += 1
+
+        return found, container_triangle_index
 
 
 def read_template(filename):

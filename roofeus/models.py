@@ -94,6 +94,7 @@ class RFProjected2dVertex:
     def __init__(self, x, y):
         self.coords = (x, y)  # (float, float)
         self.inside = False  # boolean
+        self.container_triangle_index = 0  # int
 
 
 class RFVertexData:
